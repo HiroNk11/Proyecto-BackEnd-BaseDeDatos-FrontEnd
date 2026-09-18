@@ -1,0 +1,10 @@
+# C# / .NET
+bin/
+obj/
+.vs/
+*.user
+
+# React / Node
+node_modules/
+dist/
+.env
