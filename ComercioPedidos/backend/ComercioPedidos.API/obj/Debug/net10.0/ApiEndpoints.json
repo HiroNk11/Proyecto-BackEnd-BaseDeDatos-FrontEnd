@@ -28,8 +28,8 @@
     "Order": 0,
     "Parameters": [
       {
-        "Name": "producto",
-        "Type": "ComercioPedidos.Application.Entitites.Producto",
+        "Name": "productoDto",
+        "Type": "ComercioPedidos.Application.DTO.CrearProductoDto",
         "IsRequired": true
       }
     ],
@@ -85,8 +85,8 @@
         "IsRequired": true
       },
       {
-        "Name": "pro",
-        "Type": "ComercioPedidos.Application.Entitites.Producto",
+        "Name": "productoDto",
+        "Type": "ComercioPedidos.Application.DTO.ActualizarProductoDto",
         "IsRequired": true
       }
     ],

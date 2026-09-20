@@ -15,3 +15,4 @@ C:\Users\El troll\OneDrive\Escritorio\Proyecto\ComercioPedidos\backend\ComercioP
 C:\Users\El troll\OneDrive\Escritorio\Proyecto\ComercioPedidos\backend\ComercioPedidos.Infrastructure\obj\Debug\net10.0\ref\ComercioPedidos.Infrastructure.dll
 C:\Users\El troll\OneDrive\Escritorio\Proyecto\ComercioPedidos\backend\ComercioPedidos.Infrastructure\bin\Debug\net10.0\ComercioPedidos.Infrastructure.runtimeconfig.json
 C:\Users\El troll\OneDrive\Escritorio\Proyecto\ComercioPedidos\backend\ComercioPedidos.Infrastructure\obj\Debug\net10.0\ComercioPedidos.Infrastructure.genruntimeconfig.cache
+C:\Users\El troll\OneDrive\Escritorio\Proyecto\ComercioPedidos\backend\ComercioPedidos.Infrastructure\obj\Debug\net10.0\ComercioPedidos.Infrastructure.sourcelink.json

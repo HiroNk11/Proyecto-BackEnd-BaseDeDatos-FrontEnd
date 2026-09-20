@@ -1,11 +1,15 @@
+using ComercioPedidos.Application.Services;
 using ComercioPedidos.Infrastructure.Data;
+using ComercioPedidos.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ComercioPedidosDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("ComercioPedidos")));
+builder.Services.AddScoped<IProductoService, ProductoService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
