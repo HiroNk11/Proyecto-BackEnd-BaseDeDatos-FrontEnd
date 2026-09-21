@@ -10,6 +10,7 @@ builder.Services.AddDbContext<ComercioPedidosDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("ComercioPedidos")));
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<IClienteService, ClienteService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

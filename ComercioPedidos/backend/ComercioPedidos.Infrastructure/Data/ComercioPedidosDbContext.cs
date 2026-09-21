@@ -12,9 +12,8 @@ namespace ComercioPedidos.Infrastructure.Data
             : base(options) // Le estamos pasando esa configuración a la clase DbContext de Entity Framework.
         {
         }
-
         public DbSet<Producto> Productos { get; set; } // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos Producto, que estará relacionada con una tabla de productos."
-
+        public DbSet<Cliente> Clientes { get; set; }    // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos Cliente, que estará relacionada con una tabla de clientes."
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Producto>(entity =>
@@ -22,6 +21,14 @@ namespace ComercioPedidos.Infrastructure.Data
                 entity.HasKey(p => p.Id);
 
                 entity.Property(p => p.Id)
+                    .ValueGeneratedOnAdd();
+            });
+
+            modelBuilder.Entity<Cliente>(entity =>
+            {
+                entity.HasKey(c => c.Id);
+
+                entity.Property(c => c.Id)
                     .ValueGeneratedOnAdd();
             });
         }
