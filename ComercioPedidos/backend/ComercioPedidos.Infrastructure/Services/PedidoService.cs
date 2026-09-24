@@ -74,59 +74,73 @@ namespace ComercioPedidos.Infrastructure.Services
         }
         public async Task<int> CrearPedidoAsync(CrearPedidoDto crearPedidoDto)
         {
-            var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Id == crearPedidoDto.ClienteId);
-            if (cliente == null)
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try 
             {
-                throw new Exception("El cliente no existe.");
-            }
-            var pedido = new Pedido
-            {
-                ClienteId = crearPedidoDto.ClienteId,
-                Fecha = DateTime.UtcNow,
-                Estado = EstadoPedido.Pendiente,
-                Total = 0,
-                Detalles = new List<DetallePedido>()
-            };
-          
-            foreach (var detalleDto in crearPedidoDto.Detalles)
-            {
-                var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == detalleDto.ProductoId);
-
-                if (producto == null)
+                var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Id == crearPedidoDto.ClienteId);
+                if (cliente == null)
                 {
-                    throw new Exception("El producto no existe.");
+                    throw new NotFoundException("El cliente no existe.");
                 }
-
-                if(producto.Activo == false)
+                var pedido = new Pedido
                 {
-                    throw new Exception($"El producto {producto.Nombre} no está activo.");
-                }
-
-                if (detalleDto.Cantidad > producto.Stock)
-                {
-                    throw new Exception($"Stock insuficiente para el producto {producto.Nombre}.");
-                }
-                var detalle = new DetallePedido
-                {
-                    ProductoId = producto.Id,
-                    Cantidad = detalleDto.Cantidad,
-                    PrecioUnitario = producto.Precio
-
+                    ClienteId = crearPedidoDto.ClienteId,
+                    Fecha = DateTime.UtcNow,
+                    Estado = EstadoPedido.Pendiente,
+                    Total = 0,
+                    Detalles = new List<DetallePedido>()
                 };
-                var subtotal = producto.Precio * detalleDto.Cantidad;
 
-                pedido.Total += subtotal;
-                pedido.Detalles.Add(detalle);
+                foreach (var detalleDto in crearPedidoDto.Detalles)
+                {
+                    var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == detalleDto.ProductoId);
 
-              
-                producto.Stock -= detalleDto.Cantidad;
+                    if (producto == null)
+                    {
+                        throw new NotFoundException("El producto no existe.");
+                    }
+
+                    if (producto.Activo == false)
+                    {
+                        throw new ReglaNegocioException($"El producto {producto.Nombre} no está activo.");
+                    }
+
+                    if (detalleDto.Cantidad > producto.Stock)
+                    {
+                        throw new ReglaNegocioException($"Stock insuficiente para el producto {producto.Nombre}.");
+                    }
+                    var detalle = new DetallePedido
+                    {
+                        ProductoId = producto.Id,
+                        Cantidad = detalleDto.Cantidad,
+                        PrecioUnitario = producto.Precio
+
+                    };
+                    var subtotal = producto.Precio * detalleDto.Cantidad;
+
+                    pedido.Total += subtotal;
+                    pedido.Detalles.Add(detalle);
+
+
+                    producto.Stock -= detalleDto.Cantidad;
+                }
+                await _context.Pedidos.AddAsync(pedido);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                return pedido.Id;
             }
-            await _context.Pedidos.AddAsync(pedido);
-            await _context.SaveChangesAsync();
-            return pedido.Id;
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+   
         }
         public async Task CancelarPedidoAsync(int id)
         {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
             var pedido = await _context.Pedidos
                 .Include(p => p.Detalles)
                 .ThenInclude(d => d.Producto)
@@ -150,7 +164,16 @@ namespace ComercioPedidos.Infrastructure.Services
                     detalle.Producto.Stock += detalle.Cantidad;
                 }
             }
+
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
         public async Task ConfirmarPedidoAsync(int id)
         {
