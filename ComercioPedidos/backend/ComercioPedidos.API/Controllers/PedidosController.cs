@@ -1,5 +1,6 @@
 ﻿using ComercioPedidos.Application.DTO;
 using ComercioPedidos.Application.Entitites;
+using ComercioPedidos.Application.Enums;
 using ComercioPedidos.Application.Exceptions;
 using ComercioPedidos.Application.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,11 +17,22 @@ namespace ComercioPedidos.API.Controllers
             _pedidoService = pedidoService;
         }
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PedidoDto>>> GetPedidos()
+        public async Task<ActionResult<IEnumerable<PedidoDto>>> GetPedidos(
+         EstadoPedido? estado
+        ,int? clienteId
+        ,DateTime? fechaDesde
+        ,DateTime? fechaHasta
+        ,int pagina = 1
+        ,int tamanioPagina = 10)
         {
-            var pedidos = await _pedidoService.ObtenerPedidosAsync();
-            return Ok(pedidos);
-
+         var pedidos = await _pedidoService.ObtenerPedidosAsync(
+             estado
+             , clienteId
+             , fechaDesde
+             , fechaHasta
+             , pagina
+             , tamanioPagina);
+         return Ok(pedidos);
         }
         [HttpGet("{id}")]
         public async Task<ActionResult<PedidoDto>> GetPedido(int id)

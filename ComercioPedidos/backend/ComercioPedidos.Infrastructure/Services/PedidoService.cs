@@ -16,14 +16,68 @@ namespace ComercioPedidos.Infrastructure.Services
         {
             _context = context;
         }
-        public async Task<IEnumerable<PedidoDto>> ObtenerPedidosAsync()
+        public async Task<ResultadoPaginado<PedidoDto>> ObtenerPedidosAsync(EstadoPedido? estado, int? clienteId, DateTime? fechaDesde, DateTime? fechaHasta, int pagina = 1, int tamanioPagina = 10)
         {
-            var pedidos = await _context.Pedidos
-                .Include(p => p.Cliente)
-                .Include(p => p.Detalles)
-                .ThenInclude(d => d.Producto)
-                .ToListAsync();
-            return pedidos.Select(p => new PedidoDto
+            var query = _context.Pedidos
+            .Include(p => p.Cliente)
+            .Include(p => p.Detalles)
+            .ThenInclude(d => d.Producto)
+            .AsQueryable();
+
+            if (estado.HasValue)
+            {
+                query = query.Where(p => p.Estado == estado.Value);
+            }
+            if (clienteId.HasValue)
+            {
+                query = query.Where(p => p.ClienteId == clienteId.Value);
+            }
+            if (fechaDesde.HasValue &&
+                fechaHasta.HasValue &&
+                fechaDesde.Value > fechaHasta.Value)
+               {
+                throw new ReglaNegocioException(
+                    "La fecha desde no puede ser mayor que la fecha hasta."
+                );
+            }
+            if (fechaDesde.HasValue)
+            {
+                var inicioDia = fechaDesde.Value.Date;
+
+                query = query.Where(p => p.Fecha >= inicioDia);  // Incluye todo el día de fechaHasta
+            }
+            if (fechaHasta.HasValue)
+            {
+                var diaSiguiente = fechaHasta.Value.Date.AddDays(1);
+
+                query = query.Where(p => p.Fecha < diaSiguiente);
+            }
+
+            var totalRegistros = await query.CountAsync();
+
+            if (pagina <= 0 || tamanioPagina <= 0)
+            {
+               
+                throw new ReglaNegocioException(
+                    "El número de página y el tamaño de página deben ser mayores que cero."
+                );
+            }
+
+            if (tamanioPagina > 100)
+            {
+                throw new ReglaNegocioException(
+                    "El tamaño de página no puede ser mayor a 100."
+                );
+            }
+            query = 
+            query.OrderByDescending(p => p.Fecha)                        // Primero ordená del pedido más reciente al más antiguo. Si dos tienen la misma fecha, poné primero el que tenga mayor Id.
+            .ThenByDescending(p => p.Id);
+            var registrosASaltar = (pagina - 1) * tamanioPagina;
+
+            var pedidos = await  query.Skip(registrosASaltar).Take(tamanioPagina).ToListAsync();
+
+
+            var items = pedidos.Select(p => new PedidoDto
             {
                 Id = p.Id,
                 ClienteId = p.ClienteId,
@@ -40,6 +94,14 @@ namespace ComercioPedidos.Infrastructure.Services
                     Subtotal = d.Cantidad * d.PrecioUnitario
                 }).ToList()
             });
+            return new ResultadoPaginado<PedidoDto>
+            {
+                Items = items,
+                Pagina = pagina,
+                TamanioPagina = tamanioPagina,
+                TotalRegistros = totalRegistros,
+                TotalPaginas = (int)Math.Ceiling((double)totalRegistros / tamanioPagina)
+            };
         }
         public async Task<PedidoDto?> ObtenerPedidoPorIdAsync(int id)
         {
@@ -69,7 +131,6 @@ namespace ComercioPedidos.Infrastructure.Services
                     Subtotal = d.Cantidad * d.PrecioUnitario
                 }).ToList()
             };
-
             return pedidoDto;
         }
         public async Task<int> CrearPedidoAsync(CrearPedidoDto crearPedidoDto)
