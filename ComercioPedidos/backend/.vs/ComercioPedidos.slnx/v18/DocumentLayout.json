@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "C:\\Users\\El troll\\OneDrive\\Escritorio\\Proyecto\\ComercioPedidos\\backend\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{79F322F4-5C39-E466-28EB-BB9648A22877}|ComercioPedidos.API\\ComercioPedidos.API.csproj|c:\\users\\el troll\\onedrive\\escritorio\\proyecto\\comerciopedidos\\backend\\comerciopedidos.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{79F322F4-5C39-E466-28EB-BB9648A22877}|ComercioPedidos.API\\ComercioPedidos.API.csproj|solutionrelative:comerciopedidos.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{0BD3B0ED-B6CE-571C-12E9-37DB80069126}|ComercioPedidos.Infrastructure\\ComercioPedidos.Infrastructure.csproj|c:\\users\\el troll\\onedrive\\escritorio\\proyecto\\comerciopedidos\\backend\\comerciopedidos.infrastructure\\services\\pedidoservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{0BD3B0ED-B6CE-571C-12E9-37DB80069126}|ComercioPedidos.Infrastructure\\ComercioPedidos.Infrastructure.csproj|solutionrelative:comerciopedidos.infrastructure\\services\\pedidoservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{79F322F4-5C39-E466-28EB-BB9648A22877}|ComercioPedidos.API\\ComercioPedidos.API.csproj|c:\\users\\el troll\\onedrive\\escritorio\\proyecto\\comerciopedidos\\backend\\comerciopedidos.api\\controllers\\pedidoscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{79F322F4-5C39-E466-28EB-BB9648A22877}|ComercioPedidos.API\\ComercioPedidos.API.csproj|solutionrelative:comerciopedidos.api\\controllers\\pedidoscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{79F322F4-5C39-E466-28EB-BB9648A22877}|ComercioPedidos.API\\ComercioPedidos.API.csproj|c:\\users\\el troll\\onedrive\\escritorio\\proyecto\\comerciopedidos\\backend\\comerciopedidos.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{79F322F4-5C39-E466-28EB-BB9648A22877}|ComercioPedidos.API\\ComercioPedidos.API.csproj|solutionrelative:comerciopedidos.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,24 +22,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "PedidoService.cs",
               "DocumentMoniker": "C:\\Users\\El troll\\OneDrive\\Escritorio\\Proyecto\\ComercioPedidos\\backend\\ComercioPedidos.Infrastructure\\Services\\PedidoService.cs",
               "RelativeDocumentMoniker": "ComercioPedidos.Infrastructure\\Services\\PedidoService.cs",
               "ToolTip": "C:\\Users\\El troll\\OneDrive\\Escritorio\\Proyecto\\ComercioPedidos\\backend\\ComercioPedidos.Infrastructure\\Services\\PedidoService.cs",
               "RelativeToolTip": "ComercioPedidos.Infrastructure\\Services\\PedidoService.cs",
-              "ViewState": "AgIAAC4AAAAAAAAAAAAAwEgAAADEAAAAAAAAAA==",
+              "ViewState": "AgIAAMEAAAAAAAAAAAAowNUAAAAQAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-23T14:10:16.739Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "PedidosController.cs",
               "DocumentMoniker": "C:\\Users\\El troll\\OneDrive\\Escritorio\\Proyecto\\ComercioPedidos\\backend\\ComercioPedidos.API\\Controllers\\PedidosController.cs",
               "RelativeDocumentMoniker": "ComercioPedidos.API\\Controllers\\PedidosController.cs",
@@ -52,15 +52,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 0,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\El troll\\OneDrive\\Escritorio\\Proyecto\\ComercioPedidos\\backend\\ComercioPedidos.API\\Program.cs",
               "RelativeDocumentMoniker": "ComercioPedidos.API\\Program.cs",
               "ToolTip": "C:\\Users\\El troll\\OneDrive\\Escritorio\\Proyecto\\ComercioPedidos\\backend\\ComercioPedidos.API\\Program.cs",
               "RelativeToolTip": "ComercioPedidos.API\\Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC8AAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAA0AAAAAAAAAAAAAwB0AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-23T18:41:16.719Z"
+              "WhenOpened": "2026-09-23T18:41:16.719Z",
+              "EditorCaption": ""
             }
           ]
         }

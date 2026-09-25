@@ -27,11 +27,20 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddCors(options => // Configuración de CORS
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 var app = builder.Build();
-
 // Manejo global de excepciones
 app.UseExceptionHandler();
-
+app.UseCors("Frontend"); // Aplicar la política de CORS
 // Swagger solo en desarrollo
 if (app.Environment.IsDevelopment())
 {
