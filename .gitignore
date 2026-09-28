@@ -8,3 +8,13 @@ obj/
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
+!.env.sample
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.pfx
+*.p12
+*.key
+*.pem
