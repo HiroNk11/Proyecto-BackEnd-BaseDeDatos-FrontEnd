@@ -1,53 +1,23 @@
-import './App.css';
-
-import { Routes, Route, Link } from "react-router-dom";
-
+import { Routes, Route } from "react-router-dom";
+import MainLayout from "./components/layout/MainLayout";
+import Inicio from "./pages/Inicio";
 import Productos from "./pages/productos";
 import Clientes from "./pages/clientes";
 import Pedidos from "./pages/pedidos";
-
+import "./styles/layout.css";
+import "./styles/ui.css";
 
 function App() {
   return (
-    <div className="App">
-
-      <nav>
-        <Link to="/">Inicio</Link>
-        {" | "}
-        <Link to="/productos">Productos</Link>
-        {" | "}
-        <Link to="/clientes">Clientes</Link>
-        {" | "}
-        <Link to="/pedidos">Pedidos</Link>
-      </nav>
-
-      <Routes>
-
-        <Route
-          path="/"
-          element={<h1>Sistema de Gestión de Pedidos</h1>}
-        />
-
-        <Route
-          path="/productos"
-          element={<Productos />}
-        />
-
-        <Route
-          path="/clientes"
-          element={<Clientes />}
-        />
-        
-        <Route
-        path="/pedidos"
-        element={<Pedidos />}
-        />
-
-      </Routes>
-
-    </div>
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<Inicio />} />
+        <Route path="/productos" element={<Productos />} />
+        <Route path="/clientes" element={<Clientes />} />
+        <Route path="/pedidos" element={<Pedidos />} />
+      </Route>
+    </Routes>
   );
 }
 
 export default App;
-

@@ -11,7 +11,6 @@ import {
 
 
 function Clientes() {
-
   const [clientes, setClientes] = useState<Cliente[]>([]);
 
   const [mostrarFormularioCliente, setMostrarFormularioCliente] = useState(false);
@@ -45,11 +44,13 @@ function Clientes() {
       telefono: "",
       direccion: "",
       activo: true
-    });setClienteEditandoId(null);
-    setMostrarFormularioCliente(true);  };
+    });
 
-    
-    const handleEditarCliente = (cliente: Cliente) => {
+    setClienteEditandoId(null);
+    setMostrarFormularioCliente(true);
+  };
+
+  const handleEditarCliente = (cliente: Cliente) => {
     setNuevoCliente({
       nombre: cliente.nombre,
       apellido: cliente.apellido,
@@ -63,7 +64,7 @@ function Clientes() {
     setMostrarFormularioCliente(true);
   };
 
-const handleSubmitCliente = async (e: FormEvent) => { 
+  const handleSubmitCliente = async (e: FormEvent) => {
     e.preventDefault();
 
     try {
@@ -86,7 +87,6 @@ const handleSubmitCliente = async (e: FormEvent) => {
 
       setClienteEditandoId(null);
       setMostrarFormularioCliente(false);
-
     } catch (error) {
       console.error("Error al guardar el cliente:", error);
     }
@@ -107,21 +107,31 @@ const handleSubmitCliente = async (e: FormEvent) => {
     } catch (error) {
       console.error("Error al eliminar el cliente:", error);
     }
-}
-
+  };
 
   useEffect(() => {
     cargarClientes();
   }, []);
 
-    return (
-    <div>
-    
+   return (
+  <div>
 
+    <div className="page-header">
+      <div>
+        <h1>Clientes</h1>
+        <p>Gestioná los clientes registrados</p>
+      </div>
 
-      <h1>Lista de Clientes</h1>
+      <button
+        className="btn btn-primary"
+        onClick={handleNuevoCliente}
+      >
+        Nuevo cliente
+      </button>
+    </div>
 
-      <table>
+    <div className="table-card">
+      <table className="data-table">
         <thead>
           <tr>
             <th>Nombre</th>
@@ -140,39 +150,61 @@ const handleSubmitCliente = async (e: FormEvent) => {
               <td>{cliente.nombre}</td>
               <td>{cliente.apellido}</td>
               <td>{cliente.email}</td>
-              <td>{cliente.telefono}</td>
-              <td>{cliente.direccion}</td>
-              <td>{cliente.activo ? "Activo" : "Inactivo"}</td>
-
+             <td>{cliente.telefono || "-"}</td>
+              <td>{cliente.direccion || "-"}</td>
               <td>
-                <button onClick={() => handleEliminarCliente(cliente.id)}>
-                  Eliminar
-                </button>
+  <span
+    className={
+      cliente.activo
+        ? "status status-active"
+        : "status status-inactive"
+    }
+  >
+    {cliente.activo ? "Activo" : "Inactivo"}
+  </span>
+</td>
 
-                <button onClick={() => handleEditarCliente(cliente)}>
-                  Editar
-                </button>
-              </td>
+           <td>
+  <div className="table-actions">
+    <button
+      className="btn btn-edit"
+      onClick={() => handleEditarCliente(cliente)}
+    >
+      Editar
+    </button>
+
+    <button
+      className="btn btn-danger"
+      onClick={() => handleEliminarCliente(cliente.id)}
+    >
+      Eliminar
+    </button>
+  </div>
+</td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
 
-      <button onClick={handleNuevoCliente}>
-        Nuevo cliente
-      </button>
-
-      {mostrarFormularioCliente && (
-        <form onSubmit={handleSubmitCliente}>
-
-          <h2>
-            {clienteEditandoId === null
-              ? "Nuevo cliente"
-              : "Editar cliente"}
-          </h2>
-
+   {mostrarFormularioCliente && (
+   <div className="modal-overlay">
+    <div className="modal">
+      <form
+        className="modal-form"
+        onSubmit={handleSubmitCliente}
+      >
+        <h2>
+          {clienteEditandoId === null
+            ? "Nuevo cliente"
+            : "Editar cliente"}
+        </h2>
+        <div className="form-group">
+          <label htmlFor="nombre">Nombre</label>
           <input
             type="text"
+            id="nombre"
+            required
             placeholder="Nombre"
             value={nuevoCliente.nombre}
             onChange={(e) =>
@@ -182,9 +214,13 @@ const handleSubmitCliente = async (e: FormEvent) => {
               })
             }
           />
-
+        </div>
+<div className="form-group">
+          <label htmlFor="apellido">Apellido</label>
           <input
             type="text"
+            id="apellido"
+            required
             placeholder="Apellido"
             value={nuevoCliente.apellido}
             onChange={(e) =>
@@ -194,9 +230,13 @@ const handleSubmitCliente = async (e: FormEvent) => {
               })
             }
           />
-
+        </div>
+        <div className="form-group">
+          <label htmlFor="email">Email</label>
           <input
-            type="text"
+            type="email"
+            id="email"
+            required
             placeholder="Email"
             value={nuevoCliente.email}
             onChange={(e) =>
@@ -206,9 +246,13 @@ const handleSubmitCliente = async (e: FormEvent) => {
               })
             }
           />
+        </div>
 
+        <div className="form-group">
+          <label htmlFor="telefono">Teléfono</label>
           <input
-            type="text"
+            type="tel"
+            id="telefono"
             placeholder="Teléfono"
             value={nuevoCliente.telefono ?? ""}
             onChange={(e) =>
@@ -218,9 +262,13 @@ const handleSubmitCliente = async (e: FormEvent) => {
               })
             }
           />
+        </div>
 
+        <div className="form-group">
+          <label htmlFor="direccion">Dirección</label>
           <input
             type="text"
+            id="direccion"
             placeholder="Dirección"
             value={nuevoCliente.direccion ?? ""}
             onChange={(e) =>
@@ -230,29 +278,69 @@ const handleSubmitCliente = async (e: FormEvent) => {
               })
             }
           />
+        </div>
+<div className="form-group">
+  <label htmlFor="activo">
+    Estado
+  </label>
 
-          <button type="submit">
+  <select
+    id="activo"
+    value={nuevoCliente.activo ? "true" : "false"}
+    onChange={(e) =>
+      setNuevoCliente({
+        ...nuevoCliente,
+        activo: e.target.value === "true"
+      })
+    }
+  >
+    <option value="true">Activo</option>
+    <option value="false">Inactivo</option>
+  </select>
+</div>
+        <div className="modal-actions">
+          <button
+            className="btn btn-primary"
+            type="submit"
+          >
             {clienteEditandoId === null
               ? "Guardar"
               : "Actualizar"}
           </button>
 
           <button
+            className="btn btn-secondary"
             type="button"
-            onClick={() => {
-              setMostrarFormularioCliente(false);
-              setClienteEditandoId(null);
-            }}
+           onClick={() => {
+  setMostrarFormularioCliente(false);
+  setClienteEditandoId(null);
+
+  setNuevoCliente({
+    nombre: "",
+    apellido: "",
+    email: "",
+    telefono: "",
+    direccion: "",
+    activo: true
+  });
+}}
           >
             Cancelar
           </button>
+        </div>
 
-        </form>
-      )}
+      </form>
 
     </div>
-  );
+  </div>
+)}
+
+  </div>
+);
   }
-  
+
+
+
+
 
 export default Clientes;

@@ -313,181 +313,292 @@ useEffect(() => {
 }, [pagina, filtrosAplicados]);
 
 
-  return (
-  
-    <div>
-      <div>
-  <select
-    value={estado}
-    onChange={(e) => setEstado(e.target.value)}
-  >
-    <option value="">Todos los estados</option>
-    <option value="Pendiente">Pendiente</option>
-    <option value="Confirmado">Confirmado</option>
-    <option value="Cancelado">Cancelado</option>
-    <option value="Entregado">Entregado</option>
-  </select>
-
-  <select
-    value={clienteId}
-    onChange={(e) => setClienteId(e.target.value)}
-  >
-    <option value="">Todos los clientes</option>
-
-    {clientes.map((cliente) => (
-      <option
-        key={cliente.id}
-        value={cliente.id}
-      >
-        {cliente.nombre} {cliente.apellido}
-      </option>
-    ))}
-  </select>
-
-  <input
-    type="date"
-    value={fechaDesde}
-    onChange={(e) => setFechaDesde(e.target.value)}
-  />
-
-  <input
-    type="date"
-    value={fechaHasta}
-    onChange={(e) => setFechaHasta(e.target.value)}
-  />
-</div>
-<button onClick={handleAplicarFiltros}>
-  Aplicar filtros
-</button>
-
-<button onClick={handleLimpiarFiltros}>
-  Limpiar filtros
-</button>
-<button onClick={() => setMostrarFormularioPedido(true)}>
-  Nuevo pedido
-</button>
-
-
-{mostrarFormularioPedido && (
+return (
   <div>
-    <h2>Nuevo pedido</h2>
-
-    <label>Cliente</label>
-
-    <select
-      value={nuevoPedido.clienteId}
-      onChange={(e) =>
-        setNuevoPedido({
-          ...nuevoPedido,
-          clienteId: Number(e.target.value)
-        })
-      }
-    >
-      <option value={0}>Seleccione un cliente</option>
-
-      {clientes.map((cliente) => (
-        <option
-          key={cliente.id}
-          value={cliente.id}
-        >
-          {cliente.nombre} {cliente.apellido}
-        </option>
-      ))}
-    </select>
-
-    {nuevoPedido.detalles.map((detalle, indice) => (
-      <div key={indice}>
-        <label>Producto</label>
-        <select
-          value={detalle.productoId}
-          onChange={(e) =>
-            actualizarDetalle(
-              indice,
-              "productoId",
-              Number(e.target.value)
-            )
-          }
-        >
-          <option value={0}>Seleccione un producto</option>
-
-         {productos
-  .filter((producto) => producto.activo)
-  .map((producto) => (
-    <option
-      key={producto.id}
-      value={producto.id}
-    >
-      {producto.nombre} - Stock: {producto.stock}
-    </option>
-  ))}
-        </select>
-
-        <label>Cantidad</label>
-        <input
-          type="number"
-          min={1}
-          value={detalle.cantidad}
-          onChange={(e) =>
-            actualizarDetalle(
-              indice,
-              "cantidad",
-              Number(e.target.value)
-            )
-          }
-        />
-
-        {nuevoPedido.detalles.length > 1 && (
-          <button
-            type="button"
-            onClick={() => quitarDetalle(indice)}
-          >
-            Quitar
-          </button>
-        )}
+    <div className="page-header">
+      <div>
+        <h1>Pedidos</h1>
+        <p>Gestioná y consultá los pedidos registrados</p>
       </div>
-    ))}
 
-    <button
-      type="button"
-      onClick={agregarDetalle}
-    >
-      Agregar producto
-    </button>
-{errorPedido && (
-  <p>
-    {errorPedido}
-  </p>
-)}
-    <button
-      type="button"
-      onClick={handleCrearPedido}
-    >
-      Guardar pedido
-    </button>
-
-    <button
-      type="button"
-      onClick={() => {
-        setMostrarFormularioPedido(false);
+      <button
+        className="btn btn-primary"
+        onClick={() => {
           setErrorPedido("");
-        setNuevoPedido({
-          clienteId: 0,
-          detalles: [
-            {
-              productoId: 0,
-              cantidad: 1
+          setMostrarFormularioPedido(true);
+        }}
+      >
+        Nuevo pedido
+      </button>
+    </div>
+
+
+    <div className="filters-card">
+
+      <div className="filters-grid">
+
+        <div className="form-group">
+          <label htmlFor="filtro-estado">
+            Estado
+          </label>
+
+          <select
+            id="filtro-estado"
+            value={estado}
+            onChange={(e) => setEstado(e.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Confirmado">Confirmado</option>
+            <option value="Cancelado">Cancelado</option>
+            <option value="Entregado">Entregado</option>
+          </select>
+        </div>
+
+
+        <div className="form-group">
+          <label htmlFor="filtro-cliente">
+            Cliente
+          </label>
+
+          <select
+            id="filtro-cliente"
+            value={clienteId}
+            onChange={(e) => setClienteId(e.target.value)}
+          >
+            <option value="">Todos los clientes</option>
+
+            {clientes.map((cliente) => (
+              <option
+                key={cliente.id}
+                value={cliente.id}
+              >
+                {cliente.nombre} {cliente.apellido}
+              </option>
+            ))}
+          </select>
+        </div>
+
+
+        <div className="form-group">
+          <label htmlFor="fecha-desde">
+            Desde
+          </label>
+
+          <input
+            id="fecha-desde"
+            type="date"
+            value={fechaDesde}
+            onChange={(e) =>
+              setFechaDesde(e.target.value)
             }
-          ]
-        });
-      }}
-    >Cancelar
-    </button>
-  </div>
-)}
+          />
+        </div>
 
-<h1>Lista de Pedidos</h1>
 
-      <table>
+        <div className="form-group">
+          <label htmlFor="fecha-hasta">
+            Hasta
+          </label>
+
+          <input
+            id="fecha-hasta"
+            type="date"
+            value={fechaHasta}
+            onChange={(e) =>
+              setFechaHasta(e.target.value)
+            }
+          />
+        </div>
+
+      </div>
+
+
+      <div className="filters-actions">
+
+        <button
+          className="btn btn-primary"
+          onClick={handleAplicarFiltros}
+        >
+          Aplicar filtros
+        </button>
+
+        <button
+          className="btn btn-secondary"
+          onClick={handleLimpiarFiltros}
+        >
+          Limpiar
+        </button>
+
+      </div>
+
+    </div>
+
+
+    {mostrarFormularioPedido && (
+      <div>
+
+        <h2>Nuevo pedido</h2>
+
+        <div className="form-group">
+          <label htmlFor="pedido-cliente">
+            Cliente
+          </label>
+
+          <select
+            id="pedido-cliente"
+            value={nuevoPedido.clienteId}
+            onChange={(e) =>
+              setNuevoPedido({
+                ...nuevoPedido,
+                clienteId: Number(e.target.value)
+              })
+            }
+          >
+            <option value={0}>
+              Seleccione un cliente
+            </option>
+
+            {clientes.map((cliente) => (
+              <option
+                key={cliente.id}
+                value={cliente.id}
+              >
+                {cliente.nombre} {cliente.apellido}
+              </option>
+            ))}
+          </select>
+        </div>
+
+
+        {nuevoPedido.detalles.map(
+          (detalle, indice) => (
+            <div key={indice}>
+
+              <div className="form-group">
+                <label>
+                  Producto
+                </label>
+
+                <select
+                  value={detalle.productoId}
+                  onChange={(e) =>
+                    actualizarDetalle(
+                      indice,
+                      "productoId",
+                      Number(e.target.value)
+                    )
+                  }
+                >
+                  <option value={0}>
+                    Seleccione un producto
+                  </option>
+
+                  {productos
+                    .filter(
+                      (producto) => producto.activo
+                    )
+                    .map((producto) => (
+                      <option
+                        key={producto.id}
+                        value={producto.id}
+                      >
+                        {producto.nombre}
+                        {" - "}
+                        Stock: {producto.stock}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+
+              <div className="form-group">
+                <label>
+                  Cantidad
+                </label>
+
+                <input
+                  type="number"
+                  min={1}
+                  value={detalle.cantidad}
+                  onChange={(e) =>
+                    actualizarDetalle(
+                      indice,
+                      "cantidad",
+                      Number(e.target.value)
+                    )
+                  }
+                />
+              </div>
+
+
+              {nuevoPedido.detalles.length > 1 && (
+                <button
+                  className="btn btn-danger"
+                  type="button"
+                  onClick={() =>
+                    quitarDetalle(indice)
+                  }
+                >
+                  Quitar
+                </button>
+              )}
+
+            </div>
+          )
+        )}
+
+
+        <button
+          className="btn btn-secondary"
+          type="button"
+          onClick={agregarDetalle}
+        >
+          Agregar producto
+        </button>
+
+
+        {errorPedido && (
+          <p>{errorPedido}</p>
+        )}
+
+
+        <button
+          className="btn btn-primary"
+          type="button"
+          onClick={handleCrearPedido}
+        >
+          Guardar pedido
+        </button>
+
+
+        <button
+          className="btn btn-secondary"
+          type="button"
+          onClick={() => {
+            setMostrarFormularioPedido(false);
+            setErrorPedido("");
+
+            setNuevoPedido({
+              clienteId: 0,
+              detalles: [
+                {
+                  productoId: 0,
+                  cantidad: 1
+                }
+              ]
+            });
+          }}
+        >
+          Cancelar
+        </button>
+
+      </div>
+    )}
+
+
+    <div className="table-card">
+  <table className="data-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -499,134 +610,248 @@ useEffect(() => {
           </tr>
         </thead>
 
-        <tbody>
-          {pedidos.map((pedido) => (
-            <tr key={pedido.id}>
-              <td>{pedido.id}</td>
-              <td>{pedido.nombreCliente}</td>
-            <td>{new Date(pedido.fecha).toLocaleString("es-AR")}</td>
-              <td>{pedido.estado}</td>
-              <td>${pedido.total}</td>
-              <td>
-<button
-  onClick={() => {
-    setErrorAccionPedido("");
-    setPedidoSeleccionado(pedido);
-  }}
->
-  Ver detalle
-</button>
-</td>
-            </tr>
-          ))}
-        </tbody>
-        
+<tbody>
+  {pedidos.map((pedido) => (
+    <tr key={pedido.id}>
+
+      <td>{pedido.id}</td>
+
+      <td>{pedido.nombreCliente}</td>
+
+      <td>
+        {new Date(pedido.fecha).toLocaleString("es-AR")}
+      </td>
+
+      <td>
+        <span
+          className={`order-status order-status-${pedido.estado.toLowerCase()}`}
+        >
+          {pedido.estado}
+        </span>
+      </td>
+
+      <td>
+        {pedido.total.toLocaleString("es-AR", {
+          style: "currency",
+          currency: "ARS"
+        })}
+      </td>
+
+      <td>
+        <button
+          className="btn btn-edit"
+          onClick={() => {
+            setErrorAccionPedido("");
+            setPedidoSeleccionado(pedido);
+          }}
+        >
+          Ver detalle
+        </button>
+      </td>
+
+    </tr>
+  ))}
+</tbody>
       </table>
       <div>
- <button
-  onClick={() => setPagina(pagina - 1)}
-  disabled={pagina === 1}
->
-  Anterior
-</button>
+<div className="pagination">
+  <button
+    className="btn btn-secondary"
+    onClick={() => setPagina(pagina - 1)}
+    disabled={pagina === 1}
+  >
+    Anterior
+  </button>
 
-<span>
-  Página {pagina} de {totalPaginas}
-</span>
+  <span className="pagination-info">
+    Página <strong>{pagina}</strong> de{" "}
+    <strong>{totalPaginas}</strong>
+  </span>
 
-<button
-  onClick={() => setPagina(pagina + 1)}
-  disabled={pagina >= totalPaginas}
->
-  Siguiente
-</button>
+  <button
+    className="btn btn-secondary"
+    onClick={() => setPagina(pagina + 1)}
+    disabled={pagina >= totalPaginas}
+  >
+    Siguiente
+  </button>
+</div>
 
-  {pedidoSeleccionado && (
-  <div>
-    <h2>Pedido #{pedidoSeleccionado.id}</h2>
+{pedidoSeleccionado && (
+  <div className="modal-overlay">
 
-    <p>
-      Cliente: {pedidoSeleccionado.nombreCliente}
-    </p>
+    <div className="modal order-detail-modal">
 
-    <p>
-      Estado: {pedidoSeleccionado.estado}
-    </p>
-{errorAccionPedido && (
-  <p>
-    {errorAccionPedido}
-  </p>
-)}
-    <table>
-      <thead>
-        <tr>
-          <th>Producto</th>
-          <th>Cantidad</th>
-          <th>Precio unitario</th>
-          <th>Subtotal</th>
-        </tr>
-      </thead>
+      <div className="order-detail-content">
 
-      <tbody>
-        {pedidoSeleccionado.detalles.map((detalle) => (
-          <tr key={detalle.productoId}>
-            <td>{detalle.nombreProducto}</td>
-            <td>{detalle.cantidad}</td>
-            <td>${detalle.precioUnitario}</td>
-            <td>${detalle.subtotal}</td>
-          </tr>
-        ))}
-      </tbody>
-      
-    </table>
-  {pedidoSeleccionado.estado === "Pendiente" && (
-  <>
-    <button
-      onClick={() => handleConfirmarPedido(pedidoSeleccionado.id)}
-    >
-      Confirmar
-    </button>
+        <div className="order-detail-header">
+          <div>
+            <h2>
+              Pedido #{pedidoSeleccionado.id}
+            </h2>
 
-    <button
-      onClick={() => handleCancelarPedido(pedidoSeleccionado.id)}
-    >Cancelar
-    </button>
-  </>
-)}
+            <p>
+              {pedidoSeleccionado.nombreCliente}
+            </p>
+          </div>
 
-{pedidoSeleccionado.estado === "Confirmado" && (
-  <>
-    <button
-      onClick={() => handleEntregarPedido(pedidoSeleccionado.id)}
-    >
-      Entregar
-    </button>
+          <span
+            className={`order-status order-status-${pedidoSeleccionado.estado.toLowerCase()}`}
+          >
+            {pedidoSeleccionado.estado}
+          </span>
+        </div>
 
-    <button
-      onClick={() => handleCancelarPedido(pedidoSeleccionado.id)}
-    >
-      Cancelar
-    </button>
-  </>
-)}
 
-    <p>
-      <strong>Total: ${pedidoSeleccionado.total}</strong>
-    </p>
+        {errorAccionPedido && (
+          <div className="error-message">
+            {errorAccionPedido}
+          </div>
+        )}
 
-    <button
-  onClick={() => {
-    setErrorAccionPedido("");
-    setPedidoSeleccionado(null);
-  }}
->
-  Cerrar
-</button>
+
+        <div className="order-detail-table">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {pedidoSeleccionado.detalles.map(
+                (detalle) => (
+                  <tr key={detalle.productoId}>
+                    <td>
+                      {detalle.nombreProducto}
+                    </td>
+
+                    <td>
+                      {detalle.cantidad}
+                    </td>
+
+                    <td>
+                      {detalle.precioUnitario.toLocaleString(
+                        "es-AR",
+                        {
+                          style: "currency",
+                          currency: "ARS"
+                        }
+                      )}
+                    </td>
+
+                    <td>
+                      {detalle.subtotal.toLocaleString(
+                        "es-AR",
+                        {
+                          style: "currency",
+                          currency: "ARS"
+                        }
+                      )}
+                    </td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
+        </div>
+
+
+        <div className="order-total">
+          <span>Total</span>
+
+          <strong>
+            {pedidoSeleccionado.total.toLocaleString(
+              "es-AR",
+              {
+                style: "currency",
+                currency: "ARS"
+              }
+            )}
+          </strong>
+        </div>
+
+
+        <div className="modal-actions">
+
+          {pedidoSeleccionado.estado === "Pendiente" && (
+            <>
+              <button
+                className="btn btn-primary"
+                onClick={() =>
+                  handleConfirmarPedido(
+                    pedidoSeleccionado.id
+                  )
+                }
+              >
+                Confirmar
+              </button>
+
+              <button
+                className="btn btn-danger"
+                onClick={() =>
+                  handleCancelarPedido(
+                    pedidoSeleccionado.id
+                  )
+                }
+              >
+                Cancelar pedido
+              </button>
+            </>
+          )}
+
+
+          {pedidoSeleccionado.estado === "Confirmado" && (
+            <>
+              <button
+                className="btn btn-primary"
+                onClick={() =>
+                  handleEntregarPedido(
+                    pedidoSeleccionado.id
+                  )
+                }
+              >
+                Marcar como entregado
+              </button>
+
+              <button
+                className="btn btn-danger"
+                onClick={() =>
+                  handleCancelarPedido(
+                    pedidoSeleccionado.id
+                  )
+                }
+              >
+                Cancelar pedido
+              </button>
+            </>
+          )}
+
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setErrorAccionPedido("");
+              setPedidoSeleccionado(null);
+            }}
+          >
+            Cerrar
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
   </div>
 )}
-</div>
+   </div>
     </div>
-  );
+  </div>
+);
 }
-
 export default Pedidos;
