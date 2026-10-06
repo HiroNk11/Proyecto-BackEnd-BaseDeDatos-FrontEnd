@@ -98,87 +98,6 @@
   border-bottom: none;
 }
 
-
-/* FORMULARIO */
-
-.client-form {
-  margin-top: 24px;
-
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-
-  padding: 24px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-
-  max-width: 600px;
-}
-
-.client-form h2 {
-  margin: 0 0 8px;
-  color: #111827;
-}
-
-.client-form input {
-  width: 100%;
-
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-
-  padding: 10px 12px;
-
-  font-size: 14px;
-  outline: none;
-}
-
-.client-form input:focus {
-  border-color: #2563eb;
-}
-
-.client-form > div {
-  display: flex;
-  gap: 10px;
-
-  margin-top: 6px;
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-
-  background: rgba(17, 24, 39, 0.45);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 24px;
-
-  z-index: 1000;
-}
-
-.modal {
-  width: 100%;
-  max-width: 560px;
-
-  background: white;
-  border-radius: 14px;
-
-  box-shadow:
-    0 20px 25px rgba(0, 0, 0, 0.1),
-    0 8px 10px rgba(0, 0, 0, 0.08);
-}
-
-.modal .client-form {
-  margin: 0;
-  max-width: none;
-  border: none;
-  box-shadow: none;
-}
-
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -251,19 +170,6 @@
   box-shadow:
     0 20px 25px rgba(0, 0, 0, 0.1),
     0 8px 10px rgba(0, 0, 0, 0.08);
-}
-
-.modal .client-form {
-  margin: 0;
-  max-width: none;
-  border: none;
-  box-shadow: none;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
 }
 
 .modal-form {
@@ -394,6 +300,9 @@
     flex-direction: column;
   }
 }
+
+/* ESTADOS DE PEDIDOS */
+
 .order-status {
   display: inline-block;
   padding: 5px 10px;
@@ -421,6 +330,9 @@
   background: #fee2e2;
   color: #991b1b;
 }
+
+/*PAGINACION*/ 
+
 .pagination {
   display: flex;
   align-items: center;
@@ -518,4 +430,157 @@
 
   color: #991b1b;
   font-size: 14px;
+}
+
+
+/* MODAL NUEVO PEDIDO */
+
+.order-form-modal {
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.order-form-content {
+  padding: 24px;
+}
+
+.order-form-content h2 {
+  margin: 0 0 22px;
+  color: #111827;
+  font-size: 22px;
+}
+
+
+/* FILA DE PRODUCTO */
+
+.order-item-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 150px auto;
+  align-items: end;
+  gap: 12px;
+
+  margin-top: 18px;
+  padding: 16px;
+
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.order-product {
+  min-width: 0;
+}
+
+.order-quantity input {
+  width: 100%;
+}
+
+.stock-helper {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+
+/* SUBTOTAL */
+
+.order-line-subtotal {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  padding-bottom: 10px;
+}
+
+.order-line-subtotal span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.order-line-subtotal strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+
+/* QUITAR PRODUCTO */
+
+.order-remove {
+  margin-bottom: 1px;
+}
+
+
+/* TOTAL ESTIMADO */
+
+.order-preview-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+
+  margin-top: 20px;
+  padding: 16px 0;
+
+  border-top: 1px solid #e5e7eb;
+}
+
+.order-preview-total span {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.order-preview-total strong {
+  color: #111827;
+  font-size: 20px;
+}
+
+
+/* ACCIONES DEL FORMULARIO */
+
+.order-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  margin-top: 24px;
+  padding-top: 18px;
+
+  border-top: 1px solid #e5e7eb;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 650px) {
+  .order-item-row {
+    grid-template-columns: 1fr;
+  }
+
+  .order-form-actions {
+    flex-direction: column;
+  }
+}
+
+.add-product-row {
+  margin-top: 12px;
+}
+
+.btn-add-product {
+  background: transparent;
+  color: #2563eb;
+
+  border: 1px dashed #93c5fd;
+
+  padding: 9px 14px;
+  border-radius: 8px;
+
+  font-size: 14px;
+  font-weight: 500;
+
+  cursor: pointer;
+}
+
+.btn-add-product:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
 }

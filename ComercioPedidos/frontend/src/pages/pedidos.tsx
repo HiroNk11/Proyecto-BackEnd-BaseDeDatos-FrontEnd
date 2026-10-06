@@ -78,6 +78,32 @@ const handleCrearPedido = async () => {
     );
     return;
   }
+  const detalleSinStock = nuevoPedido.detalles.find(
+  (detalle) => {
+    const producto = productos.find(
+      (producto) =>
+        producto.id === detalle.productoId
+    );
+
+    return (
+      producto &&
+      detalle.cantidad > producto.stock
+    );
+  }
+);
+
+if (detalleSinStock) {
+  const producto = productos.find(
+    (producto) =>
+      producto.id === detalleSinStock.productoId
+  );
+
+  setErrorPedido(
+    `La cantidad solicitada de ${producto?.nombre} supera el stock disponible (${producto?.stock}).`
+  );
+
+  return;
+}
 
   try {
     await crearPedido(nuevoPedido);
@@ -302,15 +328,28 @@ const quitarDetalle = (indice: number) => {
     detalles: nuevosDetalles
   });
 };
+const totalEstimado = nuevoPedido.detalles.reduce(
+  (total, detalle) => {
+    const producto = productos.find(
+      (producto) => producto.id === detalle.productoId
+    );
+
+    if (!producto) {
+      return total;
+    }
+
+    return total + producto.precio * detalle.cantidad;
+  },
+  0
+);
 
 useEffect(() => {
   cargarClientes();
   cargarProductos();
-}, []);
-
-useEffect(() => {
   cargarPedidos();
 }, [pagina, filtrosAplicados]);
+
+
 
 
 return (
@@ -436,7 +475,11 @@ return (
 
 
     {mostrarFormularioPedido && (
-      <div>
+  <div className="modal-overlay">
+
+    <div className="modal order-form-modal">
+
+      <div className="order-form-content">
 
         <h2>Nuevo pedido</h2>
 
@@ -471,129 +514,167 @@ return (
         </div>
 
 
-        {nuevoPedido.detalles.map(
-          (detalle, indice) => (
-            <div key={indice}>
+   {nuevoPedido.detalles.map(
+  (detalle, indice) => {
+    const productoSeleccionado = productos.find(
+      (producto) =>
+        producto.id === detalle.productoId
+    );
 
-              <div className="form-group">
-                <label>
-                  Producto
-                </label>
+    const subtotal = productoSeleccionado
+      ? productoSeleccionado.precio *
+        detalle.cantidad
+      : 0;
 
-                <select
-                  value={detalle.productoId}
-                  onChange={(e) =>
-                    actualizarDetalle(
-                      indice,
-                      "productoId",
-                      Number(e.target.value)
-                    )
-                  }
-                >
-                  <option value={0}>
-                    Seleccione un producto
-                  </option>
+    return (
+      <div
+        key={indice}
+        className="order-item-row"
+      >
 
-                  {productos
-                    .filter(
-                      (producto) => producto.activo
-                    )
-                    .map((producto) => (
-                      <option
-                        key={producto.id}
-                        value={producto.id}
-                      >
-                        {producto.nombre}
-                        {" - "}
-                        Stock: {producto.stock}
-                      </option>
-                    ))}
-                </select>
-              </div>
+  <div className="form-group order-product">
+    <label>Producto</label>
+
+    <select
+      value={detalle.productoId}
+      onChange={(e) =>
+        actualizarDetalle(
+          indice,
+          "productoId",
+          Number(e.target.value)
+        )
+      }
+    >
+      <option value={0}>
+        Seleccione un producto
+      </option>
+
+      {productos
+        .filter((producto) => producto.activo)
+        .map((producto) => (
+          <option
+            key={producto.id}
+            value={producto.id}
+          >
+            {producto.nombre} - Stock: {producto.stock}
+          </option>
+        ))}
+    </select>
+  </div>
+
+ <div className="form-group order-quantity">
+  <label>Cantidad</label>
+
+  <input
+    type="number"
+    min={1}
+    max={productoSeleccionado?.stock}
+    value={detalle.cantidad}
+    onChange={(e) =>
+      actualizarDetalle(
+        indice,
+        "cantidad",
+        Number(e.target.value)
+      )
+    }
+  />
+
+  {productoSeleccionado && (
+    <small className="stock-helper">
+      Disponible: {productoSeleccionado.stock}
+    </small>
+  )}
+</div>
+<div className="order-line-subtotal">
+  <span>Subtotal</span>
+
+  <strong>
+    {subtotal.toLocaleString("es-AR", {
+      style: "currency",
+      currency: "ARS"
+    })}
+  </strong>
+</div>
+  {nuevoPedido.detalles.length > 1 && (
+    <button
+      className="btn btn-danger order-remove"
+      type="button"
+      onClick={() => quitarDetalle(indice)}
+    >
+      Quitar
+    </button>
+  )}
+</div>
+          
+    );
+  }
+)}
+<div className="add-product-row">
+  <button
+    className="btn btn-add-product"
+    type="button"
+    onClick={agregarDetalle}
+  >
+    + Agregar otro producto
+  </button>
+</div>
+<div className="order-preview-total">
+  <span>Total estimado</span>
+
+  <strong>
+    {totalEstimado.toLocaleString("es-AR", {
+      style: "currency",
+      currency: "ARS"
+    })}
+  </strong>
+</div>
+
+       {errorPedido && (
+  <div className="error-message">
+    {errorPedido}
+  </div>
+)}
 
 
-              <div className="form-group">
-                <label>
-                  Cantidad
-                </label>
+        
+              <div className="order-form-actions">
 
-                <input
-                  type="number"
-                  min={1}
-                  value={detalle.cantidad}
-                  onChange={(e) =>
-                    actualizarDetalle(
-                      indice,
-                      "cantidad",
-                      Number(e.target.value)
-                    )
-                  }
-                />
-              </div>
+  <button
+    className="btn btn-primary"
+    type="button"
+    onClick={handleCrearPedido}
+  >
+    Guardar pedido
+  </button>
 
+  <button
+    className="btn btn-secondary"
+    type="button"
+    onClick={() => {
+      setMostrarFormularioPedido(false);
+      setErrorPedido("");
 
-              {nuevoPedido.detalles.length > 1 && (
-                <button
-                  className="btn btn-danger"
-                  type="button"
-                  onClick={() =>
-                    quitarDetalle(indice)
-                  }
-                >
-                  Quitar
-                </button>
-              )}
+      setNuevoPedido({
+        clienteId: 0,
+        detalles: [
+          {
+            productoId: 0,
+            cantidad: 1
+          }
+        ]
+      });
+    }}
+  >
+    Cancelar
+  </button>
 
-            </div>
-          )
-        )}
-
-
-        <button
-          className="btn btn-secondary"
-          type="button"
-          onClick={agregarDetalle}
-        >
-          Agregar producto
-        </button>
-
-
-        {errorPedido && (
-          <p>{errorPedido}</p>
-        )}
-
-
-        <button
-          className="btn btn-primary"
-          type="button"
-          onClick={handleCrearPedido}
-        >
-          Guardar pedido
-        </button>
-
-
-        <button
-          className="btn btn-secondary"
-          type="button"
-          onClick={() => {
-            setMostrarFormularioPedido(false);
-            setErrorPedido("");
-
-            setNuevoPedido({
-              clienteId: 0,
-              detalles: [
-                {
-                  productoId: 0,
-                  cantidad: 1
-                }
-              ]
-            });
-          }}
-        >
-          Cancelar
-        </button>
+</div>
 
       </div>
+
+    </div>
+
+  </div>
     )}
 
 
@@ -849,9 +930,12 @@ return (
 
   </div>
 )}
-   </div>
+       </div>
+
     </div>
+
   </div>
 );
 }
+
 export default Pedidos;
