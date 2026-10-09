@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ComercioPedidos.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+538c8acfd624aa89b5398f42e27c9fddc557f76e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cda0f1f97e485ae019f8bd52e5c14a131e49da87")]
 [assembly: System.Reflection.AssemblyProductAttribute("ComercioPedidos.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ComercioPedidos.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

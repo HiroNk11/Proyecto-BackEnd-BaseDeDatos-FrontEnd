@@ -19,6 +19,7 @@ namespace ComercioPedidos.Infrastructure.Services
         public async Task<ResultadoPaginado<PedidoDto>> ObtenerPedidosAsync(EstadoPedido? estado, int? clienteId, DateTime? fechaDesde, DateTime? fechaHasta, int pagina = 1, int tamanioPagina = 10)
         {
             var query = _context.Pedidos
+            .AsNoTracking()
             .Include(p => p.Cliente)
             .Include(p => p.Detalles)
             .ThenInclude(d => d.Producto)
@@ -44,7 +45,7 @@ namespace ComercioPedidos.Infrastructure.Services
             {
                 var inicioDia = fechaDesde.Value.Date;
 
-                query = query.Where(p => p.Fecha >= inicioDia);  // Incluye todo el día de fechaHasta
+                query = query.Where(p => p.Fecha >= inicioDia);  
             }
             if (fechaHasta.HasValue)
             {
@@ -53,11 +54,9 @@ namespace ComercioPedidos.Infrastructure.Services
                 query = query.Where(p => p.Fecha < diaSiguiente);
             }
 
-            var totalRegistros = await query.CountAsync();
 
             if (pagina <= 0 || tamanioPagina <= 0)
             {
-               
                 throw new ReglaNegocioException(
                     "El número de página y el tamaño de página deben ser mayores que cero."
                 );
@@ -69,12 +68,17 @@ namespace ComercioPedidos.Infrastructure.Services
                     "El tamaño de página no puede ser mayor a 100."
                 );
             }
-            query = 
-            query.OrderByDescending(p => p.Fecha)                        // Primero ordená del pedido más reciente al más antiguo. Si dos tienen la misma fecha, poné primero el que tenga mayor Id.
+
+            var totalRegistros = await query.CountAsync();
+            query = query
+            .OrderByDescending(p => p.Fecha)                        // Primero ordená del pedido más reciente al más antiguo. Si dos tienen la misma fecha, poné primero el que tenga mayor Id.
             .ThenByDescending(p => p.Id);
             var registrosASaltar = (pagina - 1) * tamanioPagina;
 
-            var pedidos = await  query.Skip(registrosASaltar).Take(tamanioPagina).ToListAsync();
+            var pedidos = await  query
+            .Skip(registrosASaltar)
+            .Take(tamanioPagina)
+            .ToListAsync();
 
 
             var items = pedidos.Select(p => new PedidoDto
