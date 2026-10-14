@@ -19,13 +19,34 @@ import {
   crearPedido
 } from "../services/pedidoService";
 import ConfirmModal from "../components/ui/ConfirmModal";
-
+import Toast from "../components/ui/Toast";
 
 function Pedidos() {
 
   /* =========================
      ESTADOS
   ========================= */
+
+const [
+  cargandoPedidos,
+  setCargandoPedidos
+] = useState(true);
+
+const [
+  procesandoAccionPedido,
+  setProcesandoAccionPedido
+] = useState(false);
+
+const [
+  creandoPedido,
+  setCreandoPedido
+] = useState(false);
+
+  const [
+  mensajeExito,
+  setMensajeExito
+] = useState("");
+
 const [
   pedidoACancelar,
   setPedidoACancelar
@@ -187,53 +208,59 @@ const [
 
   const cargarPedidos = async () => {
 
-    try {
+  try {
 
-      const respuesta =
-        await obtenerPedidos({
+    setCargandoPedidos(true);
 
-          pagina,
+    const respuesta =
+      await obtenerPedidos({
 
-          tamanioPagina: 3,
+        pagina,
 
-          estado:
-            filtrosAplicados.estado ||
-            undefined,
+        tamanioPagina: 3,
 
-          clienteId:
-            filtrosAplicados.clienteId
-              ? Number(
-                  filtrosAplicados.clienteId
-                )
-              : undefined,
+        estado:
+          filtrosAplicados.estado ||
+          undefined,
 
-          fechaDesde:
-            filtrosAplicados.fechaDesde ||
-            undefined,
+        clienteId:
+          filtrosAplicados.clienteId
+            ? Number(
+                filtrosAplicados.clienteId
+              )
+            : undefined,
 
-          fechaHasta:
-            filtrosAplicados.fechaHasta ||
-            undefined
-        });
+        fechaDesde:
+          filtrosAplicados.fechaDesde ||
+          undefined,
 
+        fechaHasta:
+          filtrosAplicados.fechaHasta ||
+          undefined
+      });
 
-      setPedidos(
-        respuesta.items
-      );
+    setPedidos(
+      respuesta.items
+    );
 
-      setTotalPaginas(
-        respuesta.totalPaginas
-      );
+    setTotalPaginas(
+      respuesta.totalPaginas
+    );
 
-    } catch (error) {
+  } catch (error) {
 
-      console.error(
-        "Error al obtener los pedidos:",
-        error
-      );
-    }
-  };
+    console.error(
+      "Error al obtener los pedidos:",
+      error
+    );
 
+    setPedidos([]);
+
+  } finally {
+
+    setCargandoPedidos(false);
+  }
+};
 
   /* =========================
      CREAR PEDIDO
@@ -336,7 +363,7 @@ const [
 
 
     try {
-
+setCreandoPedido(true);
       await crearPedido(
         nuevoPedido
       );
@@ -373,7 +400,9 @@ const [
 
         setPagina(1);
       }
-
+setMensajeExito(
+  "Pedido creado correctamente."
+);
     } catch (error) {
 
       console.error(
@@ -388,7 +417,10 @@ const [
           "No se pudo crear el pedido."
         )
       );
-    }
+    } finally {
+
+  setCreandoPedido(false);
+}
   };
 
 
@@ -432,69 +464,86 @@ const [
   ========================= */
 
   const handleConfirmarPedido =
-    async (id: number) => {
+  async (id: number) => {
 
-      setErrorAccionPedido("");
+    setErrorAccionPedido("");
 
-      try {
+    try {
 
-        await confirmarPedido(id);
+      setProcesandoAccionPedido(true);
 
-        await cargarPedidos();
+      await confirmarPedido(id);
 
-        setPedidoSeleccionado(null);
+      await cargarPedidos();
 
-      } catch (error) {
+      setPedidoSeleccionado(null);
 
-        console.error(
-          "Error al confirmar el pedido:",
-          error
-        );
+      setMensajeExito(
+        `Pedido #${id} confirmado correctamente.`
+      );
 
+    } catch (error) {
 
-        setErrorAccionPedido(
-          obtenerMensajeError(
-            error,
-            "No se pudo confirmar el pedido."
-          )
-        );
-      }
-    };
+      console.error(
+        "Error al confirmar el pedido:",
+        error
+      );
+
+      setErrorAccionPedido(
+        obtenerMensajeError(
+          error,
+          "No se pudo confirmar el pedido."
+        )
+      );
+
+    } finally {
+
+      setProcesandoAccionPedido(false);
+    }
+  };
 
 
   /* =========================
      ENTREGAR PEDIDO
   ========================= */
+const handleEntregarPedido =
+  async (id: number) => {
 
-  const handleEntregarPedido =
-    async (id: number) => {
+    setErrorAccionPedido("");
 
-      setErrorAccionPedido("");
+    try {
 
-      try {
+      setProcesandoAccionPedido(true);
 
-        await entregarPedido(id);
+      await entregarPedido(id);
 
-        await cargarPedidos();
+      await cargarPedidos();
 
-        setPedidoSeleccionado(null);
+      setPedidoSeleccionado(null);
 
-      } catch (error) {
+      setMensajeExito(
+        `Pedido #${id} marcado como entregado.`
+      );
 
-        console.error(
-          "Error al entregar el pedido:",
-          error
-        );
+    } catch (error) {
 
+      console.error(
+        "Error al entregar el pedido:",
+        error
+      );
 
-        setErrorAccionPedido(
-          obtenerMensajeError(
-            error,
-            "No se pudo entregar el pedido."
-          )
-        );
-      }
-    };
+      setErrorAccionPedido(
+        obtenerMensajeError(
+          error,
+          "No se pudo entregar el pedido."
+        )
+      );
+
+    } finally {
+
+      setProcesandoAccionPedido(false);
+    }
+  };
 
 
   /* =========================
@@ -522,6 +571,9 @@ const [
 
     setPedidoSeleccionado(null);
     setPedidoACancelar(null);
+    setMensajeExito(
+  "Pedido cancelado correctamente."
+);
 
   } catch (error) {
   console.error(
@@ -686,7 +738,11 @@ useEffect(() => {
   /* =========================
      JSX
   ========================= */
-
+const hayFiltrosAplicados =
+  filtrosAplicados.estado !== "" ||
+  filtrosAplicados.clienteId !== "" ||
+  filtrosAplicados.fechaDesde !== "" ||
+  filtrosAplicados.fechaHasta !== "";
   return (
 
     <div>
@@ -1231,42 +1287,40 @@ useEffect(() => {
               <div className="order-form-actions">
 
                 <button
-                  className="btn btn-primary"
-                  type="button"
-                  onClick={
-                    handleCrearPedido
-                  }
-                >
-                  Guardar pedido
-                </button>
+  className="btn btn-primary"
+  type="button"
+  disabled={creandoPedido}
+  onClick={handleCrearPedido}
+>
+  {creandoPedido
+    ? "Guardando..."
+    : "Guardar pedido"}
+</button>
 
 
-                <button
-                  className="btn btn-secondary"
-                  type="button"
-                  onClick={() => {
+             <button
+  className="btn btn-secondary"
+  type="button"
+  disabled={creandoPedido}
+  onClick={() => {
 
-                    setMostrarFormularioPedido(
-                      false
-                    );
+    setMostrarFormularioPedido(false);
 
-                    setErrorPedido("");
+    setErrorPedido("");
 
-
-                    setNuevoPedido({
-                      clienteId: 0,
-
-                      detalles: [
-                        {
-                          productoId: 0,
-                          cantidad: 1
-                        }
-                      ]
-                    });
-                  }}
-                >
-                  Cancelar
-                </button>
+    setNuevoPedido({
+      clienteId: 0,
+      detalles: [
+        {
+          productoId: 0,
+          cantidad: 1
+        }
+      ]
+    });
+  }}
+>
+  Cancelar
+</button>
 
               </div>
 
@@ -1301,85 +1355,89 @@ useEffect(() => {
 
           <tbody>
 
-            {pedidos.map(
-              (pedido) => (
+  {cargandoPedidos ? (
 
-                <tr key={pedido.id}>
+    <tr>
+      <td colSpan={6}>
+        Cargando pedidos...
+      </td>
+    </tr>
 
-                  <td>
-                    {pedido.id}
-                  </td>
+  ) : pedidos.length === 0 ? (
 
+    <tr>
+      <td colSpan={6}>
+        {hayFiltrosAplicados
+          ? "No se encontraron pedidos con los filtros seleccionados."
+          : "No hay pedidos registrados."}
+      </td>
+    </tr>
 
-                  <td>
-                    {pedido.nombreCliente}
-                  </td>
+  ) : (
 
+    pedidos.map(
+      (pedido) => (
 
-                  <td>
+        <tr key={pedido.id}>
 
-                    {new Date(
-                      pedido.fecha
-                    ).toLocaleString(
-                      "es-AR"
-                    )}
+          <td>
+            {pedido.id}
+          </td>
 
-                  </td>
+          <td>
+            {pedido.nombreCliente}
+          </td>
 
-
-                  <td>
-
-                    <span
-                      className={`order-status order-status-${pedido.estado.toLowerCase()}`}
-                    >
-                      {pedido.estado}
-                    </span>
-
-                  </td>
-
-
-                  <td>
-
-                    {pedido.total.toLocaleString(
-                      "es-AR",
-                      {
-                        style:
-                          "currency",
-
-                        currency:
-                          "ARS"
-                      }
-                    )}
-
-                  </td>
-
-
-                  <td>
-
-                    <button
-                      className="btn btn-edit"
-                      onClick={() => {
-
-                        setErrorAccionPedido(
-                          ""
-                        );
-
-                        setPedidoSeleccionado(
-                          pedido
-                        );
-                      }}
-                    >
-                      Ver detalle
-                    </button>
-
-                  </td>
-
-                </tr>
-
-              )
+          <td>
+            {new Date(
+              pedido.fecha
+            ).toLocaleString(
+              "es-AR"
             )}
+          </td>
 
-          </tbody>
+          <td>
+            <span
+              className={`order-status order-status-${pedido.estado.toLowerCase()}`}
+            >
+              {pedido.estado}
+            </span>
+          </td>
+
+          <td>
+            {pedido.total.toLocaleString(
+              "es-AR",
+              {
+                style: "currency",
+                currency: "ARS"
+              }
+            )}
+          </td>
+
+          <td>
+            <button
+              className="btn btn-edit"
+              onClick={() => {
+
+                setErrorAccionPedido("");
+
+                setPedidoSeleccionado(
+                  pedido
+                );
+              }}
+            >
+              Ver detalle
+            </button>
+          </td>
+
+        </tr>
+
+      )
+    )
+
+  )}
+
+</tbody>
 
         </table>
 
@@ -1395,9 +1453,10 @@ useEffect(() => {
                 pagina - 1
               )
             }
-            disabled={
-              pagina === 1
-            }
+           disabled={
+  pagina === 1 ||
+  cargandoPedidos
+}
           >
             Anterior
           </button>
@@ -1428,9 +1487,9 @@ useEffect(() => {
               )
             }
             disabled={
-              pagina >=
-              totalPaginas
-            }
+  pagina >= totalPaginas ||
+  cargandoPedidos
+}
           >
             Siguiente
           </button>
@@ -1615,27 +1674,32 @@ useEffect(() => {
 
                   <>
 
-                    <button
-                      className="btn btn-primary"
-                      onClick={() =>
-                        handleConfirmarPedido(
-                          pedidoSeleccionado.id
-                        )
-                      }
-                    >
-                      Confirmar
-                    </button>
+                   <button
+  className="btn btn-primary"
+  disabled={procesandoAccionPedido}
+  onClick={() =>
+    handleConfirmarPedido(
+      pedidoSeleccionado.id
+    )
+  }
+>
+  {procesandoAccionPedido
+    ? "Confirmando..."
+    : "Confirmar"}
+</button>
 
 
-                    <button
-                      className="btn btn-danger"
-                      onClick={() =>
-                        setPedidoACancelar(
-                          pedidoSeleccionado)
-                      }
-                    >
-                      Cancelar pedido
-                    </button>
+                   <button
+  className="btn btn-danger"
+  disabled={procesandoAccionPedido}
+  onClick={() =>
+    setPedidoACancelar(
+      pedidoSeleccionado
+    )
+  }
+>
+  Cancelar pedido
+</button>
 
                   </>
 
@@ -1648,15 +1712,18 @@ useEffect(() => {
                   <>
 
                     <button
-                      className="btn btn-primary"
-                      onClick={() =>
-                        handleEntregarPedido(
-                          pedidoSeleccionado.id
-                        )
-                      }
-                    >
-                      Marcar como entregado
-                    </button>
+  className="btn btn-primary"
+  disabled={procesandoAccionPedido}
+  onClick={() =>
+    handleEntregarPedido(
+      pedidoSeleccionado.id
+    )
+  }
+>
+  {procesandoAccionPedido
+    ? "Procesando..."
+    : "Marcar como entregado"}
+</button>
 
 
                     <button
@@ -1677,6 +1744,7 @@ useEffect(() => {
 
                 <button
                   className="btn btn-secondary"
+                    disabled={procesandoAccionPedido}
                   onClick={() => {
 
                     setErrorAccionPedido(
@@ -1709,6 +1777,15 @@ useEffect(() => {
     onConfirmar={handleCancelarPedido}
     onCancelar={() =>
       setPedidoACancelar(null)
+    }
+  />
+)}
+{mensajeExito && (
+  <Toast
+    mensaje={mensajeExito}
+    tipo="success"
+    onCerrar={() =>
+      setMensajeExito("")
     }
   />
 )}

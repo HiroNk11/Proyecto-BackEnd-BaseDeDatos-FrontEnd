@@ -4,6 +4,8 @@ import {
   type FormEvent
 } from "react";
 
+import Toast from "../components/ui/Toast";
+
 import type {
   Cliente,
   CrearCliente
@@ -34,6 +36,10 @@ function Clientes() {
   /* =========================
      ESTADOS
   ========================= */
+const [
+  mensajeExito,
+  setMensajeExito
+] = useState("");
 
   const [
   clienteAEliminar,
@@ -93,31 +99,31 @@ const [
 
   const cargarClientes = async () => {
 
-    try {
+  try {
 
-      setCargando(true);
+    setCargando(true);
 
-      const clientesData =
-        await obtenerClientes();
+    const clientesData =
+      await obtenerClientes();
 
-      setClientes(clientesData);
+    setClientes(clientesData);
 
-   } catch (error) {
-  console.error(
-    "Error al eliminar el cliente:",
-    error
-  );
+  } catch (error) {
 
-  setClienteAEliminar(null);
+    console.error(
+      "Error al obtener los clientes:",
+      error
+    );
 
-  setError(
-    "No se pudo eliminar el cliente."
-  );
-} finally {
+    setError(
+      "No se pudieron cargar los clientes."
+    );
 
-      setCargando(false);
-    }
-  };
+  } finally {
+
+    setCargando(false);
+  }
+};
 
 
   /* =========================
@@ -196,55 +202,59 @@ const [
   ========================= */
 
   const handleSubmitCliente = async (
-    e: FormEvent
-  ) => {
+  e: FormEvent
+) => {
 
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
+  const esEdicion =
+    clienteEditandoId !== null;
 
-      setGuardando(true);
+  try {
 
-      setError("");
+    setGuardando(true);
+    setError("");
 
+    if (!esEdicion) {
 
-      if (
-        clienteEditandoId === null
-      ) {
-
-        await crearCliente(
-          nuevoCliente
-        );
-
-      } else {
-
-        await actualizarCliente(
-          clienteEditandoId,
-          nuevoCliente
-        );
-      }
-
-
-      await cargarClientes();
-
-      cerrarFormulario();
-
-    } catch (error) {
-
-      console.error(
-        "Error al guardar el cliente:",
-        error
+      await crearCliente(
+        nuevoCliente
       );
 
-      setError(
-        "No se pudo guardar el cliente. Revisá los datos e intentá nuevamente."
+    } else {
+
+      await actualizarCliente(
+        clienteEditandoId,
+        nuevoCliente
       );
-
-    } finally {
-
-      setGuardando(false);
     }
-  };
+
+    await cargarClientes();
+
+    cerrarFormulario();
+
+    setMensajeExito(
+      esEdicion
+        ? "Cliente actualizado correctamente."
+        : "Cliente creado correctamente."
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Error al guardar el cliente:",
+      error
+    );
+
+    setError(
+      "No se pudo guardar el cliente. Revisá los datos e intentá nuevamente."
+    );
+
+  } finally {
+
+    setGuardando(false);
+  }
+};
 
 
   /* =========================
@@ -269,7 +279,9 @@ const [
     await cargarClientes();
 
     setClienteAEliminar(null);
-
+setMensajeExito(
+  "Cliente eliminado correctamente."
+);
   } catch (error) {
 
     console.error(
@@ -887,6 +899,15 @@ const [
     onConfirmar={handleEliminarCliente}
     onCancelar={() =>
       setClienteAEliminar(null)
+    }
+  />
+)}
+{mensajeExito && (
+  <Toast
+    mensaje={mensajeExito}
+    tipo="success"
+    onCerrar={() =>
+      setMensajeExito("")
     }
   />
 )}

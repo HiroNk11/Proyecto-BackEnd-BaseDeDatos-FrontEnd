@@ -18,7 +18,7 @@ import {
 
 import { useSearchParams } from "react-router-dom";
 import ConfirmModal from "../components/ui/ConfirmModal";
-
+import Toast from "../components/ui/Toast";
 const productoInicial: CrearProducto = {
   nombre: "",
   descripcion: "",
@@ -28,6 +28,11 @@ const productoInicial: CrearProducto = {
 };
 
 function Productos() {
+  const [
+  mensajeExito,
+  setMensajeExito
+] = useState("");
+
   const [searchParams] = useSearchParams();
 
   const estadoDesdeUrl =
@@ -160,53 +165,60 @@ function Productos() {
      GUARDAR / ACTUALIZAR
   ========================= */
 
-  const handleSubmit = async (
-    e: FormEvent
-  ) => {
+const handleSubmit = async (
+  e: FormEvent
+) => {
 
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
+  const esEdicion =
+    productoEditandoId !== null;
 
-      setGuardando(true);
+  try {
 
-      setError("");
+    setGuardando(true);
+    setError("");
 
-      if (productoEditandoId === null) {
+    if (!esEdicion) {
 
-        await crearProducto(
-          nuevoProducto
-        );
-
-      } else {
-
-        await actualizarProducto(
-          productoEditandoId,
-          nuevoProducto
-        );
-      }
-
-      await cargarProductos();
-
-      cerrarFormulario();
-
-    } catch (error) {
-
-      console.error(
-        "Error al guardar el producto:",
-        error
+      await crearProducto(
+        nuevoProducto
       );
 
-      setError(
-        "No se pudo guardar el producto. Revisá los datos e intentá nuevamente."
+    } else {
+
+      await actualizarProducto(
+        productoEditandoId,
+        nuevoProducto
       );
-
-    } finally {
-
-      setGuardando(false);
     }
-  };
 
+    await cargarProductos();
+
+    cerrarFormulario();
+
+    setMensajeExito(
+      esEdicion
+        ? "Producto actualizado correctamente."
+        : "Producto creado correctamente."
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Error al guardar el producto:",
+      error
+    );
+
+    setError(
+      "No se pudo guardar el producto. Revisá los datos e intentá nuevamente."
+    );
+
+  } finally {
+
+    setGuardando(false);
+  }
+};
 
   /* =========================
      ELIMINAR PRODUCTO
@@ -230,22 +242,26 @@ function Productos() {
       await cargarProductos();
 
       setProductoAEliminar(null);
+setMensajeExito(
+  "Producto eliminado correctamente."
+);
+   } catch (error) {
 
-    } catch (error) {
+  console.error(
+    "Error al eliminar el producto:",
+    error
+  );
 
-      console.error(
-        "Error al eliminar el producto:",
-        error
-      );
+  setProductoAEliminar(null);
 
-      setError(
-        "No se pudo eliminar el producto."
-      );
+  setError(
+    "No se pudo eliminar el producto."
+  );
 
-    } finally {
+} finally {
 
-      setEliminando(false);
-    }
+  setEliminando(false);
+}
   };
 
 
@@ -350,24 +366,29 @@ function Productos() {
 
   }, []);
 
-  useEffect(() => {
+useEffect(() => {
 
   const estadosPermitidos = [
-  "disponible",
-  "activo",
-  "inactivo",
-  "stock-bajo",
-  "sin-stock"
-];
+    "disponible",
+    "activo",
+    "inactivo",
+    "stock-bajo",
+    "sin-stock"
+  ];
 
   if (
     estadosPermitidos.includes(
       estadoDesdeUrl
     )
   ) {
+
     setFiltroEstado(
       estadoDesdeUrl
     );
+
+  } else {
+
+    setFiltroEstado("");
   }
 
 }, [estadoDesdeUrl]);
@@ -858,6 +879,15 @@ function Productos() {
     onConfirmar={handleEliminar}
     onCancelar={() =>
       setProductoAEliminar(null)
+    }
+  />
+)}
+{mensajeExito && (
+  <Toast
+    mensaje={mensajeExito}
+    tipo="success"
+    onCerrar={() =>
+      setMensajeExito("")
     }
   />
 )}
