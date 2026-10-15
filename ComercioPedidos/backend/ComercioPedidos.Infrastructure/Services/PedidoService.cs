@@ -12,9 +12,15 @@ namespace ComercioPedidos.Infrastructure.Services
     public class PedidoService : IPedidoService
     {
         private readonly ComercioPedidosDbContext _context;
-        public PedidoService(ComercioPedidosDbContext context)
+        private readonly IStockService _stockService;
+
+        public PedidoService(
+            ComercioPedidosDbContext context,
+            IStockService stockService
+        )
         {
             _context = context;
+            _stockService = stockService;
         }
         public async Task<ResultadoPaginado<PedidoDto>> ObtenerPedidosAsync(EstadoPedido? estado, int? clienteId, DateTime? fechaDesde, DateTime? fechaHasta, int pagina = 1, int tamanioPagina = 10)
         {
@@ -137,106 +143,160 @@ namespace ComercioPedidos.Infrastructure.Services
             };
             return pedidoDto;
         }
-        public async Task<int> CrearPedidoAsync(CrearPedidoDto crearPedidoDto)
+        public async Task<int> CrearPedidoAsync(
+    CrearPedidoDto crearPedidoDto
+)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try 
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync();
+
+            try
             {
-                var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Id == crearPedidoDto.ClienteId);
+                var cliente =
+                    await _context.Clientes
+                        .FirstOrDefaultAsync(
+                            c => c.Id ==
+                                 crearPedidoDto.ClienteId
+                        );
+
                 if (cliente == null)
                 {
-                    throw new NotFoundException("El cliente no existe.");
+                    throw new NotFoundException(
+                        "El cliente no existe."
+                    );
                 }
+
                 var pedido = new Pedido
                 {
-                    ClienteId = crearPedidoDto.ClienteId,
+                    ClienteId =
+                        crearPedidoDto.ClienteId,
+
                     Fecha = DateTime.UtcNow,
-                    Estado = EstadoPedido.Pendiente,
+
+                    Estado =
+                        EstadoPedido.Pendiente,
+
                     Total = 0,
-                    Detalles = new List<DetallePedido>()
+
+                    Detalles =
+                        new List<DetallePedido>()
                 };
 
-                foreach (var detalleDto in crearPedidoDto.Detalles)
+                // Guardamos temporalmente los productos
+                // que después necesitan descontar stock.
+                var productosPedido =
+                    new List<(
+                        Producto Producto,
+                        int Cantidad
+                    )>();
+
+                foreach (
+                    var detalleDto
+                    in crearPedidoDto.Detalles
+                )
                 {
-                    var producto = await _context.Productos.FirstOrDefaultAsync(p => p.Id == detalleDto.ProductoId);
+                    var producto =
+                        await _context.Productos
+                            .FirstOrDefaultAsync(
+                                p =>
+                                    p.Id ==
+                                    detalleDto.ProductoId
+                            );
 
                     if (producto == null)
                     {
-                        throw new NotFoundException("El producto no existe.");
+                        throw new NotFoundException(
+                            "El producto no existe."
+                        );
                     }
 
-                    if (producto.Activo == false)
+                    if (!producto.Activo)
                     {
-                        throw new ReglaNegocioException($"El producto {producto.Nombre} no está activo.");
+                        throw new ReglaNegocioException(
+                            $"El producto {producto.Nombre} no está activo."
+                        );
                     }
 
-                    if (detalleDto.Cantidad > producto.Stock)
+                    if (detalleDto.Cantidad <= 0)
                     {
-                        throw new ReglaNegocioException($"Stock insuficiente para el producto {producto.Nombre}.");
+                        throw new ReglaNegocioException(
+                            "La cantidad debe ser mayor que cero."
+                        );
                     }
-                    var detalle = new DetallePedido
-                    {
-                        ProductoId = producto.Id,
-                        Cantidad = detalleDto.Cantidad,
-                        PrecioUnitario = producto.Precio
 
-                    };
-                    var subtotal = producto.Precio * detalleDto.Cantidad;
+                    if (
+                        detalleDto.Cantidad >
+                        producto.Stock
+                    )
+                    {
+                        throw new ReglaNegocioException(
+                            $"Stock insuficiente para el producto {producto.Nombre}."
+                        );
+                    }
+
+                    var detalle =
+                        new DetallePedido
+                        {
+                            ProductoId =
+                                producto.Id,
+
+                            Cantidad =
+                                detalleDto.Cantidad,
+
+                            PrecioUnitario =
+                                producto.Precio
+                        };
+
+                    var subtotal =
+                        producto.Precio *
+                        detalleDto.Cantidad;
 
                     pedido.Total += subtotal;
-                    pedido.Detalles.Add(detalle);
 
+                    pedido.Detalles.Add(
+                        detalle
+                    );
 
-                    producto.Stock -= detalleDto.Cantidad;
+                    productosPedido.Add(
+                        (
+                            producto,
+                            detalleDto.Cantidad
+                        )
+                    );
                 }
-                await _context.Pedidos.AddAsync(pedido);
+
+                // Primer guardado:
+                // SQL Server genera pedido.Id.
+                await _context.Pedidos
+                    .AddAsync(pedido);
+
                 await _context.SaveChangesAsync();
+
+                // Ahora pedido.Id ya existe.
+                foreach (
+                    var item in productosPedido
+                )
+                {
+                    _stockService.RegistrarSalida(
+                        item.Producto,
+                        item.Cantidad,
+                        "Venta",
+                        pedido.Id
+                    );
+                }
+
+                // Guarda cambios de stock
+                // + MovimientoStock.
+                await _context.SaveChangesAsync();
+
                 await transaction.CommitAsync();
+
                 return pedido.Id;
             }
             catch
             {
                 await transaction.RollbackAsync();
-                throw;
-            }
-   
-        }
-        public async Task CancelarPedidoAsync(int id)
-        {
-            await using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-            var pedido = await _context.Pedidos
-                .Include(p => p.Detalles)
-                .ThenInclude(d => d.Producto)
-                .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (pedido == null)
-            {
-                throw new NotFoundException("El pedido no existe.");
-            }
-            if (pedido.Estado != EstadoPedido.Pendiente && pedido.Estado != EstadoPedido.Confirmado)
-            {
-                throw new ReglaNegocioException(
-                    $"No se puede cancelar un pedido con estado {pedido.Estado}."
-                );
-            }
-            pedido.Estado = EstadoPedido.Cancelado;
-            foreach (var detalle in pedido.Detalles)
-            {
-                if (detalle.Producto != null)
-                {
-                    detalle.Producto.Stock += detalle.Cantidad;
-                }
-            }
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
                 throw;
             }
         }
@@ -247,7 +307,9 @@ namespace ComercioPedidos.Infrastructure.Services
 
             if (pedido == null)
             {
-                throw new NotFoundException("El pedido no existe.");
+                throw new NotFoundException(
+                    "El pedido no existe."
+                );
             }
 
             if (pedido.Estado != EstadoPedido.Pendiente)
@@ -261,6 +323,81 @@ namespace ComercioPedidos.Infrastructure.Services
 
             await _context.SaveChangesAsync();
         }
+        public async Task CancelarPedidoAsync(int id)
+        {
+            await using var transaction =
+                await _context.Database
+                    .BeginTransactionAsync();
+
+            try
+            {
+                var pedido =
+                    await _context.Pedidos
+
+                        .Include(
+                            p => p.Detalles
+                        )
+
+                        .ThenInclude(
+                            d => d.Producto
+                        )
+
+                        .FirstOrDefaultAsync(
+                            p => p.Id == id
+                        );
+
+                if (pedido == null)
+                {
+                    throw new NotFoundException(
+                        "El pedido no existe."
+                    );
+                }
+
+                if (
+                    pedido.Estado !=
+                        EstadoPedido.Pendiente
+                    &&
+                    pedido.Estado !=
+                        EstadoPedido.Confirmado
+                )
+                {
+                    throw new ReglaNegocioException(
+                        $"No se puede cancelar un pedido con estado {pedido.Estado}."
+                    );
+                }
+
+                pedido.Estado =
+                    EstadoPedido.Cancelado;
+
+                foreach (
+                    var detalle
+                    in pedido.Detalles
+                )
+                {
+                    if (detalle.Producto != null)
+                    {
+                        _stockService
+                            .RegistrarEntrada(
+                                detalle.Producto,
+                                detalle.Cantidad,
+                                "Cancelación de pedido",
+                                pedido.Id
+                            );
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+
+                throw;
+            }
+        }
+        
         public async Task EntregarPedidoAsync(int id)
         {
             var pedido = await _context.Pedidos

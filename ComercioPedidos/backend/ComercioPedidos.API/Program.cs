@@ -19,7 +19,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
-
+builder.Services.AddScoped<IStockService, StockService>();
 // Controllers
 builder.Services.AddControllers();
 

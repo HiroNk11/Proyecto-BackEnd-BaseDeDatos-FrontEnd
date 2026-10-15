@@ -45,6 +45,15 @@ function Sidebar() {
         >
           Pedidos
         </NavLink>
+
+        <NavLink
+          to="/movimientos-stock"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          Movimientos de stock
+        </NavLink>
       </nav>
     </aside>
   );

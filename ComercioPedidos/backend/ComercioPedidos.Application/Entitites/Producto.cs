@@ -18,5 +18,8 @@ namespace ComercioPedidos.Application.Entitites
         public int Stock { get; set; }
 
         public bool Activo { get; set; }
+
+        public ICollection<MovimientoStock> MovimientosStock { get; set; }
+    = new List<MovimientoStock>();
     }
 }

@@ -4,6 +4,7 @@ import Inicio from "./pages/Inicio";
 import Productos from "./pages/productos";
 import Clientes from "./pages/clientes";
 import Pedidos from "./pages/pedidos";
+import MovimientosStock from "./pages/MovimientosStock";
 import "./styles/layout.css";
 import "./styles/ui.css";
 
@@ -15,6 +16,7 @@ function App() {
         <Route path="/productos" element={<Productos />} />
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/pedidos" element={<Pedidos />} />
+        <Route path="/movimientos-stock" element={<MovimientosStock />} />
       </Route>
     </Routes>
   );

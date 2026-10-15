@@ -16,6 +16,8 @@ namespace ComercioPedidos.Infrastructure.Data
         public DbSet<Cliente> Clientes { get; set; }    // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos Cliente, que estará relacionada con una tabla de clientes."
         public DbSet<Pedido> Pedidos { get; set; }      // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos Pedido, que estará relacionada con una tabla de pedidos."
         public DbSet<DetallePedido> DetallesPedidos { get; set; } // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos DetallePedido, que estará relacionada con una tabla de detalles de pedidos."
+
+        public DbSet<MovimientoStock> MovimientosStock { get; set; }  // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos MovimientoStock, que estará relacionada con una tabla de movimientos de stock."
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Producto>(entity =>
@@ -58,6 +60,26 @@ namespace ComercioPedidos.Infrastructure.Data
                 .WithMany() // Un producto puede estar en muchos detalles de pedidos
                 .HasForeignKey(d => d.ProductoId); // La clave foránea en DetallePedido que apunta a Producto
             });
+
+            modelBuilder.Entity<MovimientoStock>()
+     .ToTable("MovimientosStock");
+
+            modelBuilder.Entity<MovimientoStock>()
+                .HasKey(m => m.Id);
+
+            modelBuilder.Entity<MovimientoStock>()
+                .HasOne(m => m.Producto)
+                .WithMany(p => p.MovimientosStock)
+                .HasForeignKey(m => m.ProductoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MovimientoStock>()
+                .Property(m => m.Tipo)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<MovimientoStock>()
+                .Property(m => m.Motivo)
+                .HasMaxLength(250);
         }
     }
 }
