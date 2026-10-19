@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ComercioPedidos.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b4a3c9bc2a87ff254542c7eb9ee5a5592d9d7542")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c06c7585ff97bf4b40d47e02af6eb905de6f575a")]
 [assembly: System.Reflection.AssemblyProductAttribute("ComercioPedidos.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ComercioPedidos.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
