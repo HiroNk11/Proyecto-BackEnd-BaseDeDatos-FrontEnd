@@ -7,7 +7,11 @@ export async function obtenerPedidos(
   const respuesta = await fetch(
     `${API_URL}/pedidos?pagina=${pagina}&tamanioPagina=${tamanioPagina}`
   );
-
+if (!respuesta.ok) {
+  throw new Error(
+    `No se pudieron obtener los pedidos (${respuesta.status}).`
+  );
+}
   const datos: unknown = await respuesta.json();
 
   if (
@@ -75,4 +79,40 @@ export async function crearPedido(
   }
 
   return pedidoId;
+}
+
+export type AccionPedido =
+  | "confirmar"
+  | "entregar"
+  | "cancelar";
+
+export async function cambiarEstadoPedido(
+  pedidoId: number,
+  accion: AccionPedido
+): Promise<void> {
+  const respuesta = await fetch(
+    `${API_URL}/pedidos/${pedidoId}/${accion}`,
+    { method: "PUT" }
+  );
+
+  if (!respuesta.ok) {
+    let mensaje =
+      `No se pudo ${accion} el pedido (${respuesta.status}).`;
+
+    try {
+      const problema = await respuesta.json();
+
+      if (typeof problema.detail === "string") {
+        mensaje = problema.detail;
+      } else if (typeof problema.message === "string") {
+        mensaje = problema.message;
+      } else if (typeof problema.title === "string") {
+        mensaje = problema.title;
+      }
+    } catch {
+      // Conservamos el mensaje general.
+    }
+
+    throw new Error(mensaje);
+  }
 }

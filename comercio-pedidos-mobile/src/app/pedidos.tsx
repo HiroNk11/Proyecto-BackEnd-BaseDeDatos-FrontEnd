@@ -1,3 +1,4 @@
+import AccionesPedido from "@/components/AccionesPedido";
 import NuevoPedidoModal from "@/components/NuevoPedidoModal";
 import { useEffect, useState } from "react";
 import {
@@ -9,7 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { PedidosPaginados } from "../models/Pedido";
-import { obtenerPedidos } from "../services/pedidoService";
+import { AccionPedido, obtenerPedidos } from "../services/pedidoService";
+
 
 export default function PedidosScreen() {
   const [datos, setDatos] = useState<PedidosPaginados | null>(null);
@@ -60,35 +62,51 @@ const pedidoCreado = (pedidoId: number) => {
     setPagina(1);
   }
 };
-  useEffect(() => {
-    let activo = true;
 
-    obtenerPedidos(pagina)
-      .then((respuesta) => {
-        if (activo) {
-          setDatos(respuesta);
-        }
-      })
-      .catch((error: unknown) => {
-        if (activo) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : "No se pudieron cargar los pedidos."
-          );
-        }
-      })
-      .finally(() => {
-        if (activo) {
-          setCargando(false);
-        }
-      });
+useEffect(() => {
+  let activo = true;
 
-    return () => {
-      activo = false;
-    };
-  }, [pagina, recarga]);
+  obtenerPedidos(pagina)
+    .then((respuesta) => {
+      if (activo) {
+        setDatos(respuesta);
+      }
+    })
+    .catch((error: unknown) => {
+      if (activo) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar los pedidos."
+        );
+      }
+    })
+    .finally(() => {
+      if (activo) {
+        setCargando(false);
+      }
+    });
 
+  return () => {
+    activo = false;
+  };
+}, [pagina, recarga]);
+
+const pedidoActualizado = (
+  pedidoId: number,
+  accion: AccionPedido
+) => {
+  const mensajes: Record<AccionPedido, string> = {
+    confirmar: `Pedido #${pedidoId} confirmado.`,
+    entregar: `Pedido #${pedidoId} entregado.`,
+    cancelar: `Pedido #${pedidoId} cancelado. Stock devuelto.`,
+  };
+
+  setMensajeExito(mensajes[accion]);
+  setError("");
+  setCargando(true);
+  setRecarga((valor) => valor + 1);
+};
   return (
     <SafeAreaView
       style={styles.container}
@@ -191,8 +209,17 @@ const pedidoCreado = (pedidoId: number) => {
 
             <Text style={styles.total}>
               Total: $ {item.total.toLocaleString("es-AR")}
+              
             </Text>
+            <AccionesPedido
+  key={`${item.id}-${item.estado}`}
+  pedidoId={item.id}
+  estado={item.estado}
+  deshabilitado={cargando}
+  onActualizado={pedidoActualizado}
+/>
           </View>
+          
         )}
         ListFooterComponent={
           datos && datos.totalPaginas > 0 ? (

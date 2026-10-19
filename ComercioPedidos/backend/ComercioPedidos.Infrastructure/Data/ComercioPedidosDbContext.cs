@@ -16,8 +16,9 @@ namespace ComercioPedidos.Infrastructure.Data
         public DbSet<Cliente> Clientes { get; set; }    // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos Cliente, que estará relacionada con una tabla de clientes."
         public DbSet<Pedido> Pedidos { get; set; }      // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos Pedido, que estará relacionada con una tabla de pedidos."
         public DbSet<DetallePedido> DetallesPedidos { get; set; } // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos DetallePedido, que estará relacionada con una tabla de detalles de pedidos."
-
         public DbSet<MovimientoStock> MovimientosStock { get; set; }  // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos MovimientoStock, que estará relacionada con una tabla de movimientos de stock."
+
+        public DbSet<Proveedor> Proveedores { get; set; } // 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Producto>(entity =>
@@ -80,6 +81,32 @@ namespace ComercioPedidos.Infrastructure.Data
             modelBuilder.Entity<MovimientoStock>()
                 .Property(m => m.Motivo)
                 .HasMaxLength(250);
+
+            modelBuilder.Entity<Proveedor>(entity =>
+            {
+                entity.ToTable("Proveedores");
+
+                entity.HasKey(p => p.Id);
+
+                entity.Property(p => p.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(p => p.Nombre)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.Cuit)
+                    .HasMaxLength(11);
+
+                entity.Property(p => p.Email)
+                    .HasMaxLength(150);
+
+                entity.Property(p => p.Telefono)
+                    .HasMaxLength(30);
+
+                entity.Property(p => p.Direccion)
+                    .HasMaxLength(250);
+            });
         }
     }
 }
