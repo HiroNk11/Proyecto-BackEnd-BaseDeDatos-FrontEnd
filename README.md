@@ -6,12 +6,21 @@
 ![React Native](https://img.shields.io/badge/React_Native-20232A?style=flat-square&logo=react)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-CC2927?style=flat-square)
 
-
 ## Descripción
 
 ComercioPedidos es un sistema de gestión de retail para un emprendimiento de indumentaria. Centraliza la administración de productos, clientes, pedidos y movimientos de stock para facilitar el seguimiento de la operación comercial.
 
 La solución integra una aplicación web desarrollada en React y una aplicación móvil construida con React Native y Expo. Ambas consumen la misma API REST en ASP.NET Core, que concentra las reglas de negocio y el acceso a los datos mediante Entity Framework Core y SQL Server.
+
+## Recorrido de uso
+
+Con la API y el cliente iniciados:
+
+1. Registrar un producto y un cliente.
+2. Crear un pedido y consultar su detalle.
+3. Confirmar el pedido y revisar su estado.
+4. Consultar el stock y sus movimientos desde las pantallas de gestión.
+5. Consultar la información desde el otro cliente, conectado a la misma API.
 
 ## Arquitectura y Tecnologías
 
@@ -33,7 +42,6 @@ React Native · Mobile ────┘                         │
 | Frontend web | React 19, TypeScript, Vite, React Router y Axios | Proporcionar la interfaz de gestión web. |
 | Frontend móvil | React Native, TypeScript, Expo y Expo Router | Permitir la gestión desde dispositivos móviles. |
 | Documentación API | Swagger / OpenAPI | Explorar los endpoints en desarrollo. |
-
 
 El backend utiliza inyección de dependencias, manejo global de excepciones con Problem Details y una política CORS para la integración con el frontend web.
 
@@ -63,9 +71,7 @@ El backend utiliza inyección de dependencias, manejo global de excepciones con 
 
 ## Instalación y Ejecución
 
-
 ### 1. Clonar el repositorio
-
 
 ```powershell
 git clone https://github.com/HiroNk11/Proyecto-BackEnd-BaseDeDatos-FrontEnd.git
@@ -76,11 +82,9 @@ Los comandos del backend se ejecutan desde la raíz del repositorio.
 
 ### 2. Restaurar las dependencias del backend
 
-
 ```powershell
 dotnet restore ComercioPedidos/backend/ComercioPedidos.API/ComercioPedidos.API.csproj
 ```
-
 
 ### 3. Configurar la conexión a SQL Server
 
@@ -116,7 +120,6 @@ Aplicá las migraciones indicando el proyecto de infraestructura y el proyecto d
 ```powershell
 dotnet ef database update --project ComercioPedidos/backend/ComercioPedidos.Infrastructure --startup-project ComercioPedidos/backend/ComercioPedidos.API
 ```
-
 
 ### 5. Iniciar la API
 
@@ -155,7 +158,6 @@ Para generar la compilación del frontend:
 ```powershell
 npm run build
 ```
-
 
 ### 7. Iniciar la aplicación móvil
 
@@ -196,7 +198,6 @@ dotnet run --project ComercioPedidos/backend/ComercioPedidos.API -- --environmen
 ```
 
 En un dispositivo físico, localhost apunta al propio dispositivo. Utilizá la IP de tu computadora y asegurate de que el puerto sea accesible. En el emulador estándar de Android, 10.0.2.2 permite acceder al equipo anfitrión.
-
 
 ## Estructura del Proyecto
 
@@ -248,4 +249,5 @@ Proyecto-BackEnd-BaseDeDatos-FrontEnd/
 │
 └── README.md
 ```
+
 
