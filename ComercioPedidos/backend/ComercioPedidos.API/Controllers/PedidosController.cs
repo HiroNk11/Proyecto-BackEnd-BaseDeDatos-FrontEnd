@@ -4,11 +4,13 @@ using ComercioPedidos.Application.Enums;
 using ComercioPedidos.Application.Exceptions;
 using ComercioPedidos.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ComercioPedidos.API.Controllers
 {
     [ApiController] // This attribute indicates that the class is an API controller. It enables features like automatic model validation and binding of request data to action parameters.
     [Route("api/[controller]")] // This attribute defines the base route for the controller. The [controller] token will be replaced with the name of the controller, which is "Pedidos" in this case.
+    [Authorize(Policy = "Lectura")]
     public class PedidosController : ControllerBase
     {
         private readonly IPedidoService _pedidoService;
@@ -47,6 +49,7 @@ namespace ComercioPedidos.API.Controllers
             return Ok(pedido);
         }
         [HttpPost]
+        [Authorize(Policy = "Escritura")]
         public async Task<ActionResult<int>> CrearPedido(CrearPedidoDto pedido)
         {
             var pedidoId = await _pedidoService.CrearPedidoAsync(pedido);
@@ -59,6 +62,7 @@ namespace ComercioPedidos.API.Controllers
         }
 
         [HttpPut("{id}/cancelar")]
+        [Authorize(Policy = "Escritura")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -70,6 +74,7 @@ namespace ComercioPedidos.API.Controllers
         }
 
         [HttpPut("{id}/confirmar")]
+        [Authorize(Policy = "Escritura")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -81,6 +86,7 @@ namespace ComercioPedidos.API.Controllers
         }
 
         [HttpPut("{id}/entregar")]
+        [Authorize(Policy = "Escritura")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

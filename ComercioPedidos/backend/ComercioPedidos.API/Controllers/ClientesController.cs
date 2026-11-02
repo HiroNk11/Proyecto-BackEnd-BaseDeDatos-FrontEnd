@@ -2,11 +2,13 @@
 using ComercioPedidos.Application.Entitites;
 using ComercioPedidos.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ComercioPedidos.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "Lectura")]
     public class ClientesController : ControllerBase
     {
         private readonly IClienteService _clienteService;
@@ -31,12 +33,14 @@ namespace ComercioPedidos.API.Controllers
             return Ok(cliente);
         }
         [HttpPost]
+        [Authorize(Policy = "Escritura")]
         public async Task<ActionResult<Cliente>> CreateCliente(CrearClienteDto cliente)
         {
             var createdCliente = await _clienteService.AddCliente(cliente);
             return CreatedAtAction(nameof(GetCliente), new { id = createdCliente.Id }, createdCliente);
         }
         [HttpPut("{id}")]
+        [Authorize(Policy = "Escritura")]
         public async Task<ActionResult<Cliente>> UpdateCliente(int id, ActualizarClienteDto cliente)
         {
             var updatedCliente = await _clienteService.UpdateCliente(id, cliente);
@@ -48,6 +52,7 @@ namespace ComercioPedidos.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "Administracion")]
         public async Task<IActionResult> DeleteCliente(int id)
         {
             var eliminado = await _clienteService.DeleteCliente(id);

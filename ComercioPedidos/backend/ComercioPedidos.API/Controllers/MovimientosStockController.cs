@@ -2,11 +2,13 @@
 using ComercioPedidos.Application.Enum;
 using ComercioPedidos.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ComercioPedidos.API.Controllers
 {
     [ApiController]
     [Route("api/movimientos-stock")]
+    [Authorize(Policy = "Lectura")]
     public class MovimientosStockController : ControllerBase
     {
         private readonly IStockService _stockService;
@@ -43,6 +45,7 @@ namespace ComercioPedidos.API.Controllers
         }
 
         [HttpPost("entrada")]
+        [Authorize(Policy = "Escritura")]
         public async Task<IActionResult> RegistrarEntrada(
     [FromBody] RegistrarEntradaStockDto dto
 )
@@ -57,6 +60,7 @@ namespace ComercioPedidos.API.Controllers
         }
 
         [HttpPost("salida")]
+        [Authorize(Policy = "Escritura")]
         public async Task<IActionResult> RegistrarSalida(
     [FromBody] RegistrarSalidaStockDto dto
 )

@@ -2,12 +2,14 @@
 using ComercioPedidos.Application.Entitites;
 using ComercioPedidos.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ComercioPedidos.API.Controllers
 {
 
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Policy = "Lectura")]
     public class ProductosController : ControllerBase
     {
         private readonly IProductoService _productoService;
@@ -37,6 +39,7 @@ namespace ComercioPedidos.API.Controllers
             return Ok(producto);
         }
         [HttpPost]
+        [Authorize(Policy = "Escritura")]
         public async Task<ActionResult<Producto>> AddProduct(CrearProductoDto productoDto)
         {
             var producto = await _productoService.CrearProducto(productoDto);
@@ -49,6 +52,7 @@ namespace ComercioPedidos.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = "Escritura")]
         public async Task<ActionResult<Producto>> UpdateProduct(int id, ActualizarProductoDto productoDto)
         {
           var producto = await _productoService.ActualizarProducto(id, productoDto);
@@ -62,6 +66,7 @@ namespace ComercioPedidos.API.Controllers
          }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = "Administracion")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
          var eliminado = await _productoService.EliminarProducto(id);

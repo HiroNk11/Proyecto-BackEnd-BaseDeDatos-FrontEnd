@@ -33,5 +33,3 @@ export interface CrearPedido {
   clienteId: number;
   detalles: CrearDetallePedido[];
 }
-
-s
