@@ -8,3 +8,20 @@ obj/
 node_modules/
 dist/
 .env
+
+# Private configuration and generated files
+artifacts/
+__pycache__/
+*.pyc
+.env.*
+!.env.example
+!.env.*.example
+*.pfx
+*.p12
+*.pem
+*.key
+*.bak
+*.mdf
+*.ldf
+*.suo
+*.log

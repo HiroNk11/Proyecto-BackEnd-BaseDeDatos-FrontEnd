@@ -6,6 +6,10 @@
 ![React Native](https://img.shields.io/badge/React_Native-20232A?style=flat-square&logo=react)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-CC2927?style=flat-square)
 
+> Seguridad: la API exige JWT y roles. Los clientes web y movil necesitan integrar
+> el proveedor de inicio de sesion antes de un despliegue; no hay acceso anonimo
+> ni credenciales predeterminadas. Ver [configuracion y permisos](ComercioPedidos/backend/SEGURIDAD-API.md).
+
 ## Descripción
 
 ComercioPedidos es un sistema de gestión de retail para un emprendimiento de indumentaria. Centraliza la administración de productos, clientes, pedidos y movimientos de stock para facilitar el seguimiento de la operación comercial.

@@ -1,0 +1,21 @@
+name: Backend security
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  auth-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "10.0.403"
+      - name: Restore and build
+        run: |
+          dotnet restore ComercioPedidos/backend/ComercioPedidos.slnx -p:NuGetAudit=true -p:NuGetAuditMode=all -warnaserror:NU1903,NU1904
+          dotnet build ComercioPedidos/backend/ComercioPedidos.slnx -c Release --no-restore
+      - name: Offline authentication and role checks
+        run: python3 ComercioPedidos/backend/tests/security_http.py

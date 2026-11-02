@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: "nuget"
+    directory: "/ComercioPedidos/backend"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: "npm"
+    directories:
+      - "/ComercioPedidos/frontend"
+      - "/comercio-pedidos-mobile"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
