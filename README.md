@@ -15,14 +15,14 @@ Utiliza datos ficticios y permite reiniciar la demostración.
 
 ## Capturas de la aplicación
 
-<!--
-Capturas pendientes: usar únicamente datos ficticios.
-Agregar los archivos indicados y retirar este comentario para mostrar las imágenes.
+Capturas de la demo pública con datos ficticios; sin operaciones reales.
 
-![Panel de gestión con productos y stock ficticios](docs/screenshots/dashboard.png)
+![Catálogo de productos y stock con datos ficticios](docs/screenshots/dashboard.png)
+
+![Historial de movimientos de stock con datos ficticios](docs/screenshots/movimientos-stock.png)
 
 ![Detalle de un pedido con productos, cantidades y estado](docs/screenshots/flujo-principal.png)
--->
+
 
 ## Descripción
 
