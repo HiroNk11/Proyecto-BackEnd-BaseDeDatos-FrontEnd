@@ -6,6 +6,13 @@
 ![React Native](https://img.shields.io/badge/React_Native-20232A?style=flat-square&logo=react)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-CC2927?style=flat-square)
 
+## Demo interactiva
+
+[Probar ComercioPedidos](https://nicolas-giron-comerciopedidos-demo.nicogiron09.chatgpt.site/)
+
+Explorá clientes, productos, pedidos y stock desde el navegador.
+Utiliza datos ficticios y permite reiniciar la demostración.
+
 ## Descripción
 
 ComercioPedidos es un sistema de gestión de retail para un emprendimiento de indumentaria. Centraliza la administración de productos, clientes, pedidos y movimientos de stock para facilitar el seguimiento de la operación comercial.
@@ -249,10 +256,3 @@ Proyecto-BackEnd-BaseDeDatos-FrontEnd/
 │
 └── README.md
 ```
-## Demo interactiva
-
-[Probar ComercioPedidos](https://nicolas-giron-comerciopedidos-demo.nicogiron09.chatgpt.site/)
-
-Explorá clientes, productos, pedidos y stock desde el navegador.
-Utiliza datos ficticios y permite reiniciar la demostración.
-
