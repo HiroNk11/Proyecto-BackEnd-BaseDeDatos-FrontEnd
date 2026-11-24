@@ -8,10 +8,21 @@
 
 ## Demo interactiva
 
-[Probar ComercioPedidos](https://nicolas-giron-comerciopedidos-demo.nicogiron09.chatgpt.site/)
-
 Explorá clientes, productos, pedidos y stock desde el navegador.
 Utiliza datos ficticios y permite reiniciar la demostración.
+
+[Probar ComercioPedidos](https://nicolas-giron-comerciopedidos-demo.nicogiron09.chatgpt.site/)
+
+## Capturas de la aplicación
+
+<!--
+Capturas pendientes: usar únicamente datos ficticios.
+Agregar los archivos indicados y retirar este comentario para mostrar las imágenes.
+
+![Panel de gestión con productos y stock ficticios](docs/screenshots/dashboard.png)
+
+![Detalle de un pedido con productos, cantidades y estado](docs/screenshots/flujo-principal.png)
+-->
 
 ## Descripción
 
