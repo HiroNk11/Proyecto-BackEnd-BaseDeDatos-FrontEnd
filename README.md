@@ -249,5 +249,10 @@ Proyecto-BackEnd-BaseDeDatos-FrontEnd/
 │
 └── README.md
 ```
+## Demo interactiva
 
+[Probar ComercioPedidos](https://nicolas-giron-comerciopedidos-demo.nicogiron09.chatgpt.site/)
+
+Explorá clientes, productos, pedidos y stock desde el navegador.
+Utiliza datos ficticios y permite reiniciar la demostración.
 
