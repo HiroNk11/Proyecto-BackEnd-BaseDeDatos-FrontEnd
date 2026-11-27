@@ -1,11 +1,6 @@
+import { errorMessage } from "../lib/problem";
 import { useEffect, useState } from "react";
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { Cliente } from "../models/Cliente";
@@ -39,11 +34,7 @@ export default function ClientesScreen() {
       })
       .catch((error: unknown) => {
         if (activo) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : "No se pudieron cargar los clientes."
-          );
+          setError(errorMessage(error, "No se pudieron cargar los clientes."));
         }
       })
       .finally(() => {
@@ -59,10 +50,7 @@ export default function ClientesScreen() {
   }, [recarga]);
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["top", "left", "right"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <FlatList
         data={clientes}
         keyExtractor={(cliente) => cliente.id.toString()}
@@ -101,9 +89,7 @@ export default function ClientesScreen() {
                   disabled={cargando || actualizando}
                   onPress={actualizarClientes}
                 >
-                  <Text style={styles.botonTexto}>
-                    Reintentar
-                  </Text>
+                  <Text style={styles.botonTexto}>Reintentar</Text>
                 </Pressable>
               </View>
             )}

@@ -1,26 +1,22 @@
+import { errorMessage } from "../lib/problem";
 import { useRef, useState } from "react";
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
-import type {
-    AccionPedido,
-} from "../services/pedidoService";
-import {
-    cambiarEstadoPedido,
-} from "../services/pedidoService";
+import type { AccionPedido } from "../services/pedidoService";
+import { cambiarEstadoPedido } from "../services/pedidoService";
 
 interface Props {
   pedidoId: number;
   estado: string;
   deshabilitado: boolean;
-  onActualizado: (
-    pedidoId: number,
-    accion: AccionPedido
-  ) => void;
+  onBusyChange?: (busy: boolean) => void;
+  onActualizado: (pedidoId: number, accion: AccionPedido) => void;
 }
 
 const etiquetas: Record<AccionPedido, string> = {
@@ -34,9 +30,9 @@ export default function AccionesPedido({
   estado,
   deshabilitado,
   onActualizado,
+  onBusyChange,
 }: Props) {
-  const [accion, setAccion] =
-    useState<AccionPedido | null>(null);
+  const [accion, setAccion] = useState<AccionPedido | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const enviando = useRef(false);
@@ -55,24 +51,23 @@ export default function AccionesPedido({
 
     enviando.current = true;
     setGuardando(true);
+    onBusyChange?.(true);
     setError("");
 
     try {
       await cambiarEstadoPedido(pedidoId, accionElegida);
     } catch (error: unknown) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo actualizar el pedido."
-      );
+      setError(errorMessage(error, "No se pudo actualizar el pedido."));
 
       enviando.current = false;
       setGuardando(false);
+      onBusyChange?.(false);
       return;
     }
 
     enviando.current = false;
     setGuardando(false);
+    onBusyChange?.(false);
     setAccion(null);
 
     onActualizado(pedidoId, accionElegida);
@@ -92,17 +87,14 @@ export default function AccionesPedido({
               style={[
                 styles.boton,
                 opcion === "cancelar" && styles.peligro,
-                (deshabilitado || guardando) &&
-                  styles.deshabilitado,
+                (deshabilitado || guardando) && styles.deshabilitado,
               ]}
               onPress={() => {
                 setError("");
                 setAccion(opcion);
               }}
             >
-              <Text style={styles.botonTexto}>
-                {etiquetas[opcion]}
-              </Text>
+              <Text style={styles.botonTexto}>{etiquetas[opcion]}</Text>
             </Pressable>
           ))}
         </View>
@@ -132,10 +124,10 @@ export default function AccionesPedido({
               style={[
                 styles.boton,
                 accion === "cancelar" && styles.peligro,
-                (guardando || deshabilitado) &&
-                  styles.deshabilitado,
+                (guardando || deshabilitado) && styles.deshabilitado,
               ]}
             >
+              {guardando && <ActivityIndicator color="#fff" />}
               <Text style={styles.botonTexto}>
                 {guardando ? "Procesando..." : "Sí, continuar"}
               </Text>
@@ -173,7 +165,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: "#2563eb",
+    backgroundColor: "#175b72",
   },
   peligro: {
     backgroundColor: "#dc2626",

@@ -1,19 +1,14 @@
-import {
-  useEffect,
-  useState,
-  type FormEvent
-} from "react";
+import { useRef } from "react";
+import { errorMessage } from "../lib/problem";
+import { useEffect, useState, type FormEvent } from "react";
 
-import type {
-  Producto,
-  CrearProducto
-} from "../models/Producto";
+import type { Producto, CrearProducto } from "../models/Producto";
 
 import {
   obtenerProductos,
   crearProducto,
   eliminarProducto,
-  actualizarProducto
+  actualizarProducto,
 } from "../services/productoService";
 
 import { useSearchParams } from "react-router-dom";
@@ -24,93 +19,83 @@ const productoInicial: CrearProducto = {
   descripcion: "",
   precio: 0,
   stock: 0,
-  activo: true
+  activo: true,
 };
 
 function Productos() {
-  const [
-  mensajeExito,
-  setMensajeExito
-] = useState("");
+  const [mensajeExito, setMensajeExito] = useState("");
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const estadoDesdeUrl =
-    searchParams.get("estado") ?? "";
+  const estadoDesdeUrl = searchParams.get("estado") ?? "";
 
-  const [productoAEliminar, setProductoAEliminar] =
-    useState<Producto | null>(null);
+  const [productoAEliminar, setProductoAEliminar] = useState<Producto | null>(
+    null,
+  );
 
-  const [eliminando, setEliminando] =
-    useState(false);
-  
-  const [productos, setProductos] =
-    useState<Producto[]>([]);
+  const [eliminando, setEliminando] = useState(false);
 
-  const [mostrarFormulario, setMostrarFormulario] =
-    useState(false);
+  const [productos, setProductos] = useState<Producto[]>([]);
+
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   const [nuevoProducto, setNuevoProducto] =
     useState<CrearProducto>(productoInicial);
 
-  const [productoEditandoId, setProductoEditandoId] =
-    useState<number | null>(null);
+  const [productoEditandoId, setProductoEditandoId] = useState<number | null>(
+    null,
+  );
 
-  const [busqueda, setBusqueda] =
-    useState("");
+  const [busqueda, setBusqueda] = useState("");
 
-  const [filtroEstado, setFiltroEstado] =
-    useState("");
+  const filtroEstado = [
+    "disponible",
+    "activo",
+    "inactivo",
+    "stock-bajo",
+    "sin-stock",
+  ].includes(estadoDesdeUrl)
+    ? estadoDesdeUrl
+    : "";
+  const setFiltroEstado = (value: string) =>
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value) next.set("estado", value);
+      else next.delete("estado");
+      return next;
+    });
+  const saving = useRef(false);
+  const deleting = useRef(false);
 
-  const [cargando, setCargando] =
-    useState(true);
+  const [cargando, setCargando] = useState(true);
 
-  const [guardando, setGuardando] =
-    useState(false);
+  const [guardando, setGuardando] = useState(false);
 
-  const [error, setError] =
-    useState("");
-
+  const [error, setError] = useState("");
 
   /* =========================
      CARGAR PRODUCTOS
   ========================= */
 
   const cargarProductos = async () => {
-
     try {
-
       setCargando(true);
 
-      const productosData =
-        await obtenerProductos();
+      const productosData = await obtenerProductos();
 
       setProductos(productosData);
-
     } catch (error) {
-
-      console.error(
-        "Error al obtener los productos:",
-        error
-      );
-
-      setError(
-        "No se pudieron cargar los productos."
-      );
-
+      setError(errorMessage(error, "No se pudieron cargar los productos."));
     } finally {
-
       setCargando(false);
     }
   };
-
 
   /* =========================
      ABRIR FORMULARIO NUEVO
   ========================= */
 
   const handleNuevoProducto = () => {
-
     setNuevoProducto(productoInicial);
 
     setProductoEditandoId(null);
@@ -120,21 +105,17 @@ function Productos() {
     setMostrarFormulario(true);
   };
 
-
   /* =========================
      ABRIR FORMULARIO EDICIÓN
   ========================= */
 
-  const handleEditar = (
-    producto: Producto
-  ) => {
-
+  const handleEditar = (producto: Producto) => {
     setNuevoProducto({
       nombre: producto.nombre,
       descripcion: producto.descripcion ?? "",
       precio: producto.precio,
       stock: producto.stock,
-      activo: producto.activo
+      activo: producto.activo,
     });
 
     setProductoEditandoId(producto.id);
@@ -144,13 +125,11 @@ function Productos() {
     setMostrarFormulario(true);
   };
 
-
   /* =========================
      CERRAR FORMULARIO
   ========================= */
 
   const cerrarFormulario = () => {
-
     setMostrarFormulario(false);
 
     setProductoEditandoId(null);
@@ -160,337 +139,209 @@ function Productos() {
     setError("");
   };
 
-
   /* =========================
      GUARDAR / ACTUALIZAR
   ========================= */
 
-const handleSubmit = async (
-  e: FormEvent
-) => {
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (saving.current) return;
+    saving.current = true;
 
-  e.preventDefault();
+    const esEdicion = productoEditandoId !== null;
 
-  const esEdicion =
-    productoEditandoId !== null;
+    try {
+      setGuardando(true);
+      setError("");
 
-  try {
+      if (!esEdicion) {
+        await crearProducto(nuevoProducto);
+      } else {
+        await actualizarProducto(productoEditandoId, nuevoProducto);
+      }
 
-    setGuardando(true);
-    setError("");
+      await cargarProductos();
 
-    if (!esEdicion) {
+      cerrarFormulario();
 
-      await crearProducto(
-        nuevoProducto
+      setMensajeExito(
+        esEdicion
+          ? "Producto actualizado correctamente."
+          : "Producto creado correctamente.",
       );
-
-    } else {
-
-      await actualizarProducto(
-        productoEditandoId,
-        nuevoProducto
+    } catch (error) {
+      setError(
+        errorMessage(
+          error,
+          "No se pudo guardar el producto. Revisá los datos e intentá nuevamente.",
+        ),
       );
+    } finally {
+      saving.current = false;
+      setGuardando(false);
     }
-
-    await cargarProductos();
-
-    cerrarFormulario();
-
-    setMensajeExito(
-      esEdicion
-        ? "Producto actualizado correctamente."
-        : "Producto creado correctamente."
-    );
-
-  } catch (error) {
-
-    console.error(
-      "Error al guardar el producto:",
-      error
-    );
-
-    setError(
-      "No se pudo guardar el producto. Revisá los datos e intentá nuevamente."
-    );
-
-  } finally {
-
-    setGuardando(false);
-  }
-};
+  };
 
   /* =========================
      ELIMINAR PRODUCTO
   ========================= */
 
   const handleEliminar = async () => {
-
-    if (!productoAEliminar) {
+    if (!productoAEliminar || deleting.current) {
       return;
     }
 
     try {
-
+      deleting.current = true;
       setEliminando(true);
       setError("");
 
-      await eliminarProducto(
-        productoAEliminar.id
-      );
+      await eliminarProducto(productoAEliminar.id);
 
       await cargarProductos();
 
       setProductoAEliminar(null);
-setMensajeExito(
-  "Producto eliminado correctamente."
-);
-   } catch (error) {
+      setMensajeExito("Producto eliminado correctamente.");
+    } catch (error) {
+      setProductoAEliminar(null);
 
-  console.error(
-    "Error al eliminar el producto:",
-    error
-  );
-
-  setProductoAEliminar(null);
-
-  setError(
-    "No se pudo eliminar el producto."
-  );
-
-} finally {
-
-  setEliminando(false);
-}
+      setError(errorMessage(error, "No se pudo eliminar el producto."));
+    } finally {
+      deleting.current = false;
+      setEliminando(false);
+    }
   };
-
 
   /* =========================
      ESTADO DEL STOCK
   ========================= */
 
-  const obtenerEstadoStock = (
-    stock: number
-  ) => {
-
+  const obtenerEstadoStock = (stock: number) => {
     if (stock === 0) {
-
       return {
         texto: "Sin stock",
-        clase: "stock-badge stock-out"
+        clase: "stock-badge stock-out",
       };
     }
 
     if (stock <= 5) {
-
       return {
         texto: "Stock bajo",
-        clase: "stock-badge stock-low"
+        clase: "stock-badge stock-low",
       };
     }
 
     return {
       texto: "Disponible",
-      clase: "stock-badge stock-ok"
+      clase: "stock-badge stock-ok",
     };
   };
-
 
   /* =========================
      FILTROS
   ========================= */
 
-  const productosFiltrados =
-    productos.filter((producto) => {
+  const productosFiltrados = productos.filter((producto) => {
+    const coincideBusqueda =
+      producto.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+      (producto.descripcion ?? "")
+        .toLowerCase()
+        .includes(busqueda.toLowerCase());
 
-      const coincideBusqueda =
-        producto.nombre
-          .toLowerCase()
-          .includes(
-            busqueda.toLowerCase()
-          ) ||
+    const coincideEstado =
+      filtroEstado === "" ||
+      (filtroEstado === "disponible" &&
+        producto.activo &&
+        producto.stock > 0) ||
+      (filtroEstado === "activo" && producto.activo) ||
+      (filtroEstado === "inactivo" && !producto.activo) ||
+      (filtroEstado === "stock-bajo" &&
+        producto.activo &&
+        producto.stock > 0 &&
+        producto.stock <= 5) ||
+      (filtroEstado === "sin-stock" && producto.stock === 0);
 
-        (producto.descripcion ?? "")
-          .toLowerCase()
-          .includes(
-            busqueda.toLowerCase()
-          );
-
-
-      const coincideEstado =
-  filtroEstado === "" ||
-
-  (
-    filtroEstado === "disponible" &&
-    producto.activo &&
-    producto.stock > 0
-  ) ||
-
-  (
-    filtroEstado === "activo" &&
-    producto.activo
-  ) ||
-
-  (
-    filtroEstado === "inactivo" &&
-    !producto.activo
-  ) ||
-
-  (
-    filtroEstado === "stock-bajo" &&
-    producto.activo &&
-    producto.stock > 0 &&
-    producto.stock <= 5
-  ) ||
-
-  (
-    filtroEstado === "sin-stock" &&
-    producto.stock === 0
-  );
-
-
-      return (
-        coincideBusqueda &&
-        coincideEstado
-      );
-    });
-
+    return coincideBusqueda && coincideEstado;
+  });
 
   /* =========================
      CARGA INICIAL
   ========================= */
 
   useEffect(() => {
-
-    cargarProductos();
-
+    let active = true;
+    obtenerProductos()
+      .then((data) => {
+        if (active) setProductos(data);
+      })
+      .catch((failure: unknown) => {
+        if (active) setError(errorMessage(failure));
+      })
+      .finally(() => {
+        if (active) setCargando(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-useEffect(() => {
-
-  const estadosPermitidos = [
-    "disponible",
-    "activo",
-    "inactivo",
-    "stock-bajo",
-    "sin-stock"
-  ];
-
-  if (
-    estadosPermitidos.includes(
-      estadoDesdeUrl
-    )
-  ) {
-
-    setFiltroEstado(
-      estadoDesdeUrl
-    );
-
-  } else {
-
-    setFiltroEstado("");
-  }
-
-}, [estadoDesdeUrl]);
-
   return (
-
     <div>
-
       {/* ENCABEZADO */}
 
       <div className="page-header">
-
         <div>
+          <h1>Productos</h1>
 
-          <h1>
-            Productos
-          </h1>
-
-          <p>
-            Gestioná el catálogo y el stock de productos
-          </p>
-
+          <p>Gestioná el catálogo y el stock de productos</p>
         </div>
 
-
-        <button
-          className="btn btn-primary"
-          onClick={handleNuevoProducto}
-        >
+        <button className="btn btn-primary" onClick={handleNuevoProducto}>
           Nuevo producto
         </button>
-
       </div>
-
 
       {/* ERROR GENERAL */}
 
       {error && !mostrarFormulario && (
-
-        <div className="error-message">
+        <div role="alert" className="error-message">
           {error}
         </div>
-
       )}
-
 
       {/* FILTROS */}
 
       <div className="filters-bar">
-
         <input
           type="text"
           placeholder="Buscar por nombre o descripción..."
           value={busqueda}
-          onChange={(e) =>
-            setBusqueda(e.target.value)
-          }
+          onChange={(e) => setBusqueda(e.target.value)}
         />
 
-
         <select
-  value={filtroEstado}
-  onChange={(e) =>
-    setFiltroEstado(e.target.value)
-  }
->
-  <option value="">
-    Todos los productos
-  </option>
+          value={filtroEstado}
+          onChange={(e) => setFiltroEstado(e.target.value)}
+        >
+          <option value="">Todos los productos</option>
 
-  <option value="disponible">
-    Disponibles
-  </option>
+          <option value="disponible">Disponibles</option>
 
-  <option value="activo">
-    Activos
-  </option>
+          <option value="activo">Activos</option>
 
-  <option value="inactivo">
-    Inactivos
-  </option>
+          <option value="inactivo">Inactivos</option>
 
-  <option value="stock-bajo">
-    Stock bajo
-  </option>
+          <option value="stock-bajo">Stock bajo</option>
 
-  <option value="sin-stock">
-    Sin stock
-  </option>
-</select>
-
+          <option value="sin-stock">Sin stock</option>
+        </select>
       </div>
-
 
       {/* TABLA */}
 
       <div className="table-card">
-
         <table className="data-table">
-
           <thead>
-
             <tr>
               <th>Nombre</th>
               <th>Descripción</th>
@@ -499,195 +350,105 @@ useEffect(() => {
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
-
           </thead>
 
-
           <tbody>
-
             {cargando ? (
-
               <tr>
-
-                <td colSpan={6}>
-                  Cargando productos...
-                </td>
-
+                <td colSpan={6}>Cargando productos...</td>
               </tr>
-
             ) : productosFiltrados.length === 0 ? (
-
               <tr>
-
-                <td colSpan={6}>
-                  No se encontraron productos.
-                </td>
-
+                <td colSpan={6}>No se encontraron productos.</td>
               </tr>
-
             ) : (
+              productosFiltrados.map((producto) => {
+                const estadoStock = obtenerEstadoStock(producto.stock);
 
-              productosFiltrados.map(
-                (producto) => {
+                return (
+                  <tr key={producto.id}>
+                    <td>{producto.nombre}</td>
 
-                  const estadoStock =
-                    obtenerEstadoStock(
-                      producto.stock
-                    );
+                    <td>{producto.descripcion || "-"}</td>
 
-                  return (
+                    <td>
+                      {producto.precio.toLocaleString("es-AR", {
+                        style: "currency",
+                        currency: "ARS",
+                      })}
+                    </td>
 
-                    <tr key={producto.id}>
+                    <td>
+                      <div className="stock-info">
+                        <strong>{producto.stock}</strong>
 
-                      <td>
-                        {producto.nombre}
-                      </td>
-
-
-                      <td>
-
-                        {producto.descripcion || "-"}
-
-                      </td>
-
-
-                      <td>
-
-                        {producto.precio.toLocaleString(
-                          "es-AR",
-                          {
-                            style: "currency",
-                            currency: "ARS"
-                          }
-                        )}
-
-                      </td>
-
-
-                      <td>
-
-                        <div className="stock-info">
-
-                          <strong>
-                            {producto.stock}
-                          </strong>
-
-                          <span
-                            className={
-                              estadoStock.clase
-                            }
-                          >
-                            {estadoStock.texto}
-                          </span>
-
-                        </div>
-
-                      </td>
-
-
-                      <td>
-
-                        <span
-                          className={
-                            producto.activo
-                              ? "status status-active"
-                              : "status status-inactive"
-                          }
-                        >
-
-                          {producto.activo
-                            ? "Activo"
-                            : "Inactivo"}
-
+                        <span className={estadoStock.clase}>
+                          {estadoStock.texto}
                         </span>
+                      </div>
+                    </td>
 
-                      </td>
+                    <td>
+                      <span
+                        className={
+                          producto.activo
+                            ? "status status-active"
+                            : "status status-inactive"
+                        }
+                      >
+                        {producto.activo ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
 
+                    <td>
+                      <div className="table-actions">
+                        <button
+                          className="btn btn-edit"
+                          onClick={() => handleEditar(producto)}
+                        >
+                          Editar
+                        </button>
 
-                      <td>
-
-                        <div className="table-actions">
-
-                          <button
-                            className="btn btn-edit"
-                            onClick={() =>
-                              handleEditar(
-                                producto
-                              )
-                            }
-                          >
-                            Editar
-                          </button>
-
-
-                          <button
-  className="btn btn-danger"
-  onClick={() =>
-    setProductoAEliminar(producto)
-  }
->
-  Eliminar
-</button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-
-                  );
-                }
-              )
-
+                        <button
+                          className="btn btn-danger"
+                          onClick={() => setProductoAEliminar(producto)}
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
-
           </tbody>
-
         </table>
-
       </div>
-
 
       {/* MODAL */}
 
       {mostrarFormulario && (
-
         <div className="modal-overlay">
-
           <div className="modal">
-
-            <form
-              className="modal-form"
-              onSubmit={handleSubmit}
-            >
-
+            <form className="modal-form" onSubmit={handleSubmit}>
               <h2>
-
                 {productoEditandoId === null
                   ? "Nuevo producto"
                   : "Editar producto"}
-
               </h2>
-
 
               {/* ERROR DEL FORMULARIO */}
 
               {error && (
-
-                <div className="error-message">
+                <div role="alert" className="error-message">
                   {error}
                 </div>
-
               )}
-
 
               {/* NOMBRE */}
 
               <div className="form-group">
-
-                <label htmlFor="producto-nombre">
-                  Nombre
-                </label>
+                <label htmlFor="producto-nombre">Nombre</label>
 
                 <input
                   id="producto-nombre"
@@ -700,48 +461,35 @@ useEffect(() => {
                   onChange={(e) =>
                     setNuevoProducto({
                       ...nuevoProducto,
-                      nombre: e.target.value
+                      nombre: e.target.value,
                     })
                   }
                 />
-
               </div>
-
 
               {/* DESCRIPCIÓN */}
 
               <div className="form-group">
-
-                <label htmlFor="producto-descripcion">
-                  Descripción
-                </label>
+                <label htmlFor="producto-descripcion">Descripción</label>
 
                 <input
                   id="producto-descripcion"
                   type="text"
                   placeholder="Descripción del producto"
-                  value={
-                    nuevoProducto.descripcion ?? ""
-                  }
+                  value={nuevoProducto.descripcion ?? ""}
                   onChange={(e) =>
                     setNuevoProducto({
                       ...nuevoProducto,
-                      descripcion:
-                        e.target.value
+                      descripcion: e.target.value,
                     })
                   }
                 />
-
               </div>
-
 
               {/* PRECIO */}
 
               <div className="form-group">
-
-                <label htmlFor="producto-precio">
-                  Precio
-                </label>
+                <label htmlFor="producto-precio">Precio</label>
 
                 <input
                   id="producto-precio"
@@ -753,24 +501,16 @@ useEffect(() => {
                   onChange={(e) =>
                     setNuevoProducto({
                       ...nuevoProducto,
-                      precio:
-                        Number(
-                          e.target.value
-                        )
+                      precio: Number(e.target.value),
                     })
                   }
                 />
-
               </div>
-
 
               {/* STOCK */}
 
               <div className="form-group">
-
-                <label htmlFor="producto-stock">
-                  Stock
-                </label>
+                <label htmlFor="producto-stock">Stock</label>
 
                 <input
                   id="producto-stock"
@@ -782,65 +522,41 @@ useEffect(() => {
                   onChange={(e) =>
                     setNuevoProducto({
                       ...nuevoProducto,
-                      stock:
-                        Number(
-                          e.target.value
-                        )
+                      stock: Number(e.target.value),
                     })
                   }
                 />
-
               </div>
-
 
               {/* ESTADO */}
 
               <div className="form-group">
-
-                <label htmlFor="producto-activo">
-                  Estado
-                </label>
+                <label htmlFor="producto-activo">Estado</label>
 
                 <select
                   id="producto-activo"
-                  value={
-                    nuevoProducto.activo
-                      ? "true"
-                      : "false"
-                  }
+                  value={nuevoProducto.activo ? "true" : "false"}
                   onChange={(e) =>
                     setNuevoProducto({
                       ...nuevoProducto,
-                      activo:
-                        e.target.value ===
-                        "true"
+                      activo: e.target.value === "true",
                     })
                   }
                 >
+                  <option value="true">Activo</option>
 
-                  <option value="true">
-                    Activo
-                  </option>
-
-                  <option value="false">
-                    Inactivo
-                  </option>
-
+                  <option value="false">Inactivo</option>
                 </select>
-
               </div>
-
 
               {/* BOTONES */}
 
               <div className="modal-actions">
-
                 <button
                   className="btn btn-primary"
                   type="submit"
                   disabled={guardando}
                 >
-
                   {guardando
                     ? productoEditandoId === null
                       ? "Guardando..."
@@ -848,9 +564,7 @@ useEffect(() => {
                     : productoEditandoId === null
                       ? "Guardar"
                       : "Actualizar"}
-
                 </button>
-
 
                 <button
                   className="btn btn-secondary"
@@ -860,39 +574,29 @@ useEffect(() => {
                 >
                   Cancelar
                 </button>
-
               </div>
-
             </form>
-
           </div>
-
         </div>
-
       )}
-{productoAEliminar && (
-  <ConfirmModal
-    titulo="Eliminar producto"
-    mensaje={`¿Estás seguro de que querés eliminar "${productoAEliminar.nombre}"?`}
-    textoConfirmar="Eliminar"
-    procesando={eliminando}
-    onConfirmar={handleEliminar}
-    onCancelar={() =>
-      setProductoAEliminar(null)
-    }
-  />
-)}
-{mensajeExito && (
-  <Toast
-    mensaje={mensajeExito}
-    tipo="success"
-    onCerrar={() =>
-      setMensajeExito("")
-    }
-  />
-)}
+      {productoAEliminar && (
+        <ConfirmModal
+          titulo="Eliminar producto"
+          mensaje={`¿Estás seguro de que querés eliminar "${productoAEliminar.nombre}"?`}
+          textoConfirmar="Eliminar"
+          procesando={eliminando}
+          onConfirmar={handleEliminar}
+          onCancelar={() => setProductoAEliminar(null)}
+        />
+      )}
+      {mensajeExito && (
+        <Toast
+          mensaje={mensajeExito}
+          tipo="success"
+          onCerrar={() => setMensajeExito("")}
+        />
+      )}
     </div>
-
   );
 }
 

@@ -1,4 +1,5 @@
-interface ConfirmModalProps {
+import Modal from "./Modal";
+interface Props {
   titulo: string;
   mensaje: string;
   textoConfirmar?: string;
@@ -7,55 +8,35 @@ interface ConfirmModalProps {
   onConfirmar: () => void;
   onCancelar: () => void;
 }
-
-function ConfirmModal({
+export default function ConfirmModal({
   titulo,
   mensaje,
   textoConfirmar = "Confirmar",
-  textoCancelar = "Cancelar",
+  textoCancelar = "Volver",
   procesando = false,
   onConfirmar,
-  onCancelar
-}: ConfirmModalProps) {
+  onCancelar,
+}: Props) {
   return (
-    <div className="modal-overlay">
-      <div
-        className="modal confirm-modal"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="confirm-modal-content">
-
-          <h2>{titulo}</h2>
-
-          <p>{mensaje}</p>
-
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="btn btn-danger"
-              disabled={procesando}
-              onClick={onConfirmar}
-            >
-              {procesando
-                ? "Procesando..."
-                : textoConfirmar}
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              disabled={procesando}
-              onClick={onCancelar}
-            >
-              {textoCancelar}
-            </button>
-          </div>
-
-        </div>
+    <Modal title={titulo} busy={procesando} onClose={onCancelar}>
+      <p>{mensaje}</p>
+      <div className="modal-actions">
+        <button
+          className="btn btn-danger"
+          disabled={procesando}
+          onClick={onConfirmar}
+        >
+          {procesando && <span className="spinner" aria-hidden="true" />}
+          {procesando ? "Procesando…" : textoConfirmar}
+        </button>
+        <button
+          className="btn btn-secondary"
+          disabled={procesando}
+          onClick={onCancelar}
+        >
+          {textoCancelar}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }
-
-export default ConfirmModal;

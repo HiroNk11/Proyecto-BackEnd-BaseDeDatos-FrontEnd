@@ -7,6 +7,7 @@ import Pedidos from "./pages/pedidos";
 import MovimientosStock from "./pages/MovimientosStock";
 import "./styles/layout.css";
 import "./styles/ui.css";
+import "./styles/etapa2.css";
 
 function App() {
   return (

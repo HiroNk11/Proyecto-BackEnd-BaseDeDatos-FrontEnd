@@ -1,1798 +1,582 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { Cliente } from "../models/Cliente";
-import type { Producto } from "../models/Producto";
-import type {
-  Pedido,
-  CrearPedido
-} from "../models/Pedido";
-
+import type { Pedido, CrearPedido } from "../models/Pedido";
 import { obtenerClientes } from "../services/clienteService";
 import { obtenerProductos } from "../services/productoService";
-
 import {
   obtenerPedidos,
   confirmarPedido,
-  entregarPedido,
   cancelarPedido,
-  crearPedido
+  entregarPedido,
+  crearPedido,
 } from "../services/pedidoService";
+import { useResource } from "../hooks/useResource";
+import { errorMessage } from "../lib/problem";
+import StatusBadge from "../components/ui/StatusBadge";
+import ResourceState from "../components/ui/ResourceState";
+import Modal from "../components/ui/Modal";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import Toast from "../components/ui/Toast";
 
-function Pedidos() {
+const states = ["Pendiente", "Confirmado", "Entregado", "Cancelado"];
+const money = (value: number) =>
+  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(
+    value,
+  );
+type Action = "confirmar" | "entregar" | "cancelar";
+const actions: Record<Action, (id: number) => Promise<void>> = {
+  confirmar: confirmarPedido,
+  entregar: entregarPedido,
+  cancelar: cancelarPedido,
+};
+const initial: CrearPedido = {
+  clienteId: 0,
+  detalles: [{ productoId: 0, cantidad: 1 }],
+};
 
-  /* =========================
-     ESTADOS
-  ========================= */
-
-const [
-  cargandoPedidos,
-  setCargandoPedidos
-] = useState(true);
-
-const [
-  procesandoAccionPedido,
-  setProcesandoAccionPedido
-] = useState(false);
-
-const [
-  creandoPedido,
-  setCreandoPedido
-] = useState(false);
-
-  const [
-  mensajeExito,
-  setMensajeExito
-] = useState("");
-
-const [
-  pedidoACancelar,
-  setPedidoACancelar
-] = useState<Pedido | null>(null);
-
-const [
-  cancelandoPedido,
-  setCancelandoPedido
-] = useState(false);
-  
-  const [searchParams] = useSearchParams();
-
-  const estadoDesdeUrl =
-  searchParams.get("estado") ?? "";
-
-  const [errorPedido, setErrorPedido] = useState("");
-
-  const [
-    mostrarFormularioPedido,
-    setMostrarFormularioPedido
-  ] = useState(false);
-
-  const [productos, setProductos] =
-    useState<Producto[]>([]);
-
-  const [pedidos, setPedidos] =
-    useState<Pedido[]>([]);
-
-  const [clientes, setClientes] =
-    useState<Cliente[]>([]);
-
-  const [pagina, setPagina] =
-    useState(1);
-
-  const [totalPaginas, setTotalPaginas] =
-    useState(1);
-
-  const [estado, setEstado] =
-    useState("");
-
-  const [clienteId, setClienteId] =
-    useState("");
-
-  const [fechaDesde, setFechaDesde] =
-    useState("");
-
-  const [fechaHasta, setFechaHasta] =
-    useState("");
-
-  const [
-    errorAccionPedido,
-    setErrorAccionPedido
-  ] = useState("");
-
-  const [
-    pedidoSeleccionado,
-    setPedidoSeleccionado
-  ] = useState<Pedido | null>(null);
-
-
-  const [
-    filtrosAplicados,
-    setFiltrosAplicados
-  ] = useState({
-    estado: "",
-    clienteId: "",
-    fechaDesde: "",
-    fechaHasta: ""
-  });
-
-
-  const [nuevoPedido, setNuevoPedido] =
-    useState<CrearPedido>({
-      clienteId: 0,
-
-      detalles: [
-        {
-          productoId: 0,
-          cantidad: 1
-        }
-      ]
+export default function Pedidos() {
+  const [params, setParams] = useSearchParams();
+  const query = params.toString();
+  const page = Math.max(1, Number(params.get("pagina")) || 1);
+  const load = useCallback(() => {
+    const search = new URLSearchParams(query);
+    return obtenerPedidos({
+      pagina: Math.max(1, Number(search.get("pagina")) || 1),
+      tamanioPagina: 10,
+      estado: states.includes(search.get("estado") || "")
+        ? search.get("estado")!
+        : undefined,
+      clienteId:
+        Number(search.get("clienteId")) > 0
+          ? Number(search.get("clienteId"))
+          : undefined,
+      fechaDesde: search.get("fechaDesde") || undefined,
+      fechaHasta: search.get("fechaHasta") || undefined,
     });
-
-
-  /* =========================
-     MENSAJES DE ERROR
-  ========================= */
-
-  const obtenerMensajeError = (
-    error: unknown,
-    mensajePorDefecto: string
-  ) => {
-
+  }, [query]);
+  const orders = useResource(load);
+  const clients = useResource(obtenerClientes);
+  const products = useResource(obtenerProductos);
+  const [selected, setSelected] = useState<Pedido | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [draft, setDraft] = useState<CrearPedido>(initial);
+  const [intent, setIntent] = useState<{ id: number; action: Action } | null>(
+    null,
+  );
+  const [processing, setProcessing] = useState(false);
+  const lock = useRef(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  function filter(key: string, value: string) {
+    setParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      if (key !== "pagina") next.delete("pagina");
+      return next;
+    });
+  }
+  function openCreate() {
+    setDraft({ clienteId: 0, detalles: [{ productoId: 0, cantidad: 1 }] });
+    setError("");
+    setCreating(true);
+  }
+  async function create(event: FormEvent) {
+    event.preventDefault();
+    if (lock.current) return;
     if (
-      axios.isAxiosError<{
-        mensaje?: string;
-      }>(error)
+      !draft.clienteId ||
+      !draft.detalles.length ||
+      draft.detalles.some(
+        (d) => !d.productoId || !Number.isInteger(d.cantidad) || d.cantidad < 1,
+      )
     ) {
-
-      return (
-        error.response?.data?.mensaje ??
-        mensajePorDefecto
+      setError(
+        "Seleccioná un cliente y al menos un producto con cantidad válida.",
       );
+      return;
     }
-
-    return mensajePorDefecto;
-  };
-
-
-  /* =========================
-     CARGAR PRODUCTOS
-  ========================= */
-
-  const cargarProductos = async () => {
-
+    lock.current = true;
+    setProcessing(true);
+    setError("");
     try {
-
-      const productosData =
-        await obtenerProductos();
-
-      setProductos(productosData);
-
-    } catch (error) {
-
-      console.error(
-        "Error al obtener los productos:",
-        error
-      );
-    }
-  };
-
-
-  /* =========================
-     CARGAR CLIENTES
-  ========================= */
-
-  const cargarClientes = async () => {
-
-    try {
-
-      const clientesData =
-        await obtenerClientes();
-
-      setClientes(clientesData);
-
-    } catch (error) {
-
-      console.error(
-        "Error al obtener los clientes:",
-        error
-      );
-    }
-  };
-
-
-  /* =========================
-     CARGAR PEDIDOS
-  ========================= */
-
-  const cargarPedidos = async () => {
-
-  try {
-
-    setCargandoPedidos(true);
-
-    const respuesta =
-      await obtenerPedidos({
-
-        pagina,
-
-        tamanioPagina: 3,
-
-        estado:
-          filtrosAplicados.estado ||
-          undefined,
-
-        clienteId:
-          filtrosAplicados.clienteId
-            ? Number(
-                filtrosAplicados.clienteId
-              )
-            : undefined,
-
-        fechaDesde:
-          filtrosAplicados.fechaDesde ||
-          undefined,
-
-        fechaHasta:
-          filtrosAplicados.fechaHasta ||
-          undefined
-      });
-
-    setPedidos(
-      respuesta.items
-    );
-
-    setTotalPaginas(
-      respuesta.totalPaginas
-    );
-
-  } catch (error) {
-
-    console.error(
-      "Error al obtener los pedidos:",
-      error
-    );
-
-    setPedidos([]);
-
-  } finally {
-
-    setCargandoPedidos(false);
-  }
-};
-
-  /* =========================
-     CREAR PEDIDO
-  ========================= */
-
-  const handleCrearPedido = async () => {
-
-    setErrorPedido("");
-
-
-    if (nuevoPedido.clienteId === 0) {
-
-      setErrorPedido(
-        "Debe seleccionar un cliente."
-      );
-
-      return;
-    }
-
-
-    const detalleInvalido =
-      nuevoPedido.detalles.some(
-        (detalle) =>
-          detalle.productoId === 0 ||
-          detalle.cantidad <= 0
-      );
-
-
-    if (detalleInvalido) {
-
-      setErrorPedido(
-        "Todos los productos deben estar seleccionados y tener una cantidad mayor que cero."
-      );
-
-      return;
-    }
-
-
-    const detalleSinStock =
-      nuevoPedido.detalles.find(
-        (detalle) => {
-
-          const producto =
-            productos.find(
-              (producto) =>
-                producto.id ===
-                detalle.productoId
-            );
-
-
-          return (
-            producto &&
-            detalle.cantidad >
-              producto.stock
-          );
-        }
-      );
-
-
-    if (detalleSinStock) {
-
-      const producto =
-        productos.find(
-          (producto) =>
-            producto.id ===
-            detalleSinStock.productoId
-        );
-
-
-      setErrorPedido(
-        `La cantidad solicitada de ${producto?.nombre} supera el stock disponible (${producto?.stock}).`
-      );
-
-      return;
-    }
-
-
-    const productosSeleccionados =
-      nuevoPedido.detalles.map(
-        (detalle) =>
-          detalle.productoId
-      );
-
-
-    const hayProductosDuplicados =
-      new Set(
-        productosSeleccionados
-      ).size !==
-      productosSeleccionados.length;
-
-
-    if (hayProductosDuplicados) {
-
-      setErrorPedido(
-        "No se puede agregar el mismo producto más de una vez al pedido."
-      );
-
-      return;
-    }
-
-
-    try {
-setCreandoPedido(true);
-      await crearPedido(
-        nuevoPedido
-      );
-
-
-      setMostrarFormularioPedido(
-        false
-      );
-
-
-      setNuevoPedido({
-        clienteId: 0,
-
-        detalles: [
-          {
-            productoId: 0,
-            cantidad: 1
-          }
-        ]
-      });
-
-
-      setErrorPedido("");
-
-
-      await cargarProductos();
-
-
-      if (pagina === 1) {
-
-        await cargarPedidos();
-
-      } else {
-
-        setPagina(1);
-      }
-setMensajeExito(
-  "Pedido creado correctamente."
-);
-    } catch (error) {
-
-      console.error(
-        "Error al crear el pedido:",
-        error
-      );
-
-
-      setErrorPedido(
-        obtenerMensajeError(
-          error,
-          "No se pudo crear el pedido."
-        )
-      );
+      await crearPedido(draft);
+      setCreating(false);
+      setSuccess("Pedido creado. El stock fue actualizado.");
+      orders.refresh();
+      products.refresh();
+    } catch (failure) {
+      setError(errorMessage(failure));
     } finally {
-
-  setCreandoPedido(false);
-}
-  };
-
-
-  /* =========================
-     FILTROS
-  ========================= */
-
-  const handleAplicarFiltros = () => {
-
-    setPagina(1);
-
-    setFiltrosAplicados({
-      estado,
-      clienteId,
-      fechaDesde,
-      fechaHasta
-    });
-  };
-
-
-  const handleLimpiarFiltros = () => {
-
-    setEstado("");
-    setClienteId("");
-    setFechaDesde("");
-    setFechaHasta("");
-
-    setPagina(1);
-
-    setFiltrosAplicados({
-      estado: "",
-      clienteId: "",
-      fechaDesde: "",
-      fechaHasta: ""
-    });
-  };
-
-
-  /* =========================
-     CONFIRMAR PEDIDO
-  ========================= */
-
-  const handleConfirmarPedido =
-  async (id: number) => {
-
-    setErrorAccionPedido("");
-
-    try {
-
-      setProcesandoAccionPedido(true);
-
-      await confirmarPedido(id);
-
-      await cargarPedidos();
-
-      setPedidoSeleccionado(null);
-
-      setMensajeExito(
-        `Pedido #${id} confirmado correctamente.`
-      );
-
-    } catch (error) {
-
-      console.error(
-        "Error al confirmar el pedido:",
-        error
-      );
-
-      setErrorAccionPedido(
-        obtenerMensajeError(
-          error,
-          "No se pudo confirmar el pedido."
-        )
-      );
-
-    } finally {
-
-      setProcesandoAccionPedido(false);
+      lock.current = false;
+      setProcessing(false);
     }
-  };
-
-
-  /* =========================
-     ENTREGAR PEDIDO
-  ========================= */
-const handleEntregarPedido =
-  async (id: number) => {
-
-    setErrorAccionPedido("");
-
+  }
+  async function execute() {
+    if (!intent || lock.current) return;
+    lock.current = true;
+    setProcessing(true);
+    setError("");
     try {
-
-      setProcesandoAccionPedido(true);
-
-      await entregarPedido(id);
-
-      await cargarPedidos();
-
-      setPedidoSeleccionado(null);
-
-      setMensajeExito(
-        `Pedido #${id} marcado como entregado.`
-      );
-
-    } catch (error) {
-
-      console.error(
-        "Error al entregar el pedido:",
-        error
-      );
-
-      setErrorAccionPedido(
-        obtenerMensajeError(
-          error,
-          "No se pudo entregar el pedido."
-        )
-      );
-
+      await actions[intent.action](intent.id);
+      setSuccess(`Pedido #${intent.id}: acción ${intent.action} completada.`);
+      setSelected(null);
+      orders.refresh();
+      products.refresh();
+    } catch (failure) {
+      setError(errorMessage(failure));
     } finally {
-
-      setProcesandoAccionPedido(false);
+      lock.current = false;
+      setProcessing(false);
+      setIntent(null);
     }
-  };
-
-
-  /* =========================
-     CANCELAR PEDIDO
-  ========================= */
-
-  const handleCancelarPedido = async () => {
-
-  if (!pedidoACancelar) {
-    return;
   }
-
-  setErrorAccionPedido("");
-
-  try {
-
-    setCancelandoPedido(true);
-
-    await cancelarPedido(
-      pedidoACancelar.id
-    );
-
-    await cargarPedidos();
-    await cargarProductos();
-
-    setPedidoSeleccionado(null);
-    setPedidoACancelar(null);
-    setMensajeExito(
-  "Pedido cancelado correctamente."
-);
-
-  } catch (error) {
-  console.error(
-    "Error al cancelar el pedido:",
-    error
+  const estimate = draft.detalles.reduce(
+    (total, item) =>
+      total +
+      (products.data?.find((p) => p.id === item.productoId)?.precio || 0) *
+        item.cantidad,
+    0,
   );
-
-  setPedidoACancelar(null);
-
-  setErrorAccionPedido(
-    obtenerMensajeError(
-      error,
-      "No se pudo cancelar el pedido."
-    )
-  );
-} finally {
-
-    setCancelandoPedido(false);
-  }
-};
-
-
-  /* =========================
-     DETALLES DEL PEDIDO
-  ========================= */
-
-  const actualizarDetalle = (
-    indice: number,
-    campo:
-      | "productoId"
-      | "cantidad",
-    valor: number
-  ) => {
-
-    const nuevosDetalles = [
-      ...nuevoPedido.detalles
-    ];
-
-
-    nuevosDetalles[indice] = {
-      ...nuevosDetalles[indice],
-      [campo]: valor
-    };
-
-
-    setNuevoPedido({
-      ...nuevoPedido,
-      detalles: nuevosDetalles
-    });
-  };
-
-
-  const agregarDetalle = () => {
-
-    setNuevoPedido({
-      ...nuevoPedido,
-
-      detalles: [
-        ...nuevoPedido.detalles,
-
-        {
-          productoId: 0,
-          cantidad: 1
-        }
-      ]
-    });
-  };
-
-
-  const quitarDetalle = (
-    indice: number
-  ) => {
-
-    const nuevosDetalles =
-      nuevoPedido.detalles.filter(
-        (_, i) =>
-          i !== indice
-      );
-
-
-    setNuevoPedido({
-      ...nuevoPedido,
-      detalles: nuevosDetalles
-    });
-  };
-
-
-  /* =========================
-     TOTAL ESTIMADO
-  ========================= */
-
-  const totalEstimado =
-    nuevoPedido.detalles.reduce(
-      (total, detalle) => {
-
-        const producto =
-          productos.find(
-            (producto) =>
-              producto.id ===
-              detalle.productoId
-          );
-
-
-        if (!producto) {
-          return total;
-        }
-
-
-        return (
-          total +
-          producto.precio *
-            detalle.cantidad
-        );
-      },
-      0
-    );
-
-
-  /* =========================
-     CARGA INICIAL
-  ========================= */
-
-useEffect(() => {
-  cargarClientes();
-  cargarProductos();
-}, []);
-
-useEffect(() => {
-  cargarPedidos();
-}, [pagina, filtrosAplicados]);
-
-useEffect(() => {
-
-  const estadosPermitidos = [
-    "Pendiente",
-    "Confirmado",
-    "Cancelado",
-    "Entregado"
-  ];
-
-  const estadoInicial =
-    estadosPermitidos.includes(
-      estadoDesdeUrl
-    )
-      ? estadoDesdeUrl
-      : "";
-
-  setEstado(
-    estadoInicial
-  );
-
-  setPagina(1);
-
-  setFiltrosAplicados(
-    (filtrosActuales) => ({
-      ...filtrosActuales,
-      estado: estadoInicial
-    })
-  );
-
-}, [estadoDesdeUrl]);
-  /* =========================
-     JSX
-  ========================= */
-const hayFiltrosAplicados =
-  filtrosAplicados.estado !== "" ||
-  filtrosAplicados.clienteId !== "" ||
-  filtrosAplicados.fechaDesde !== "" ||
-  filtrosAplicados.fechaHasta !== "";
+  const currentDate = new Date();
+  const today = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`;
   return (
-
-    <div>
-
-      {/* ENCABEZADO */}
-
+    <div className="orders-page">
       <div className="page-header">
-
         <div>
-
-          <h1>
-            Pedidos
-          </h1>
-
-          <p>
-            Gestioná y consultá los pedidos registrados
-          </p>
-
+          <p className="section-eyebrow">OPERACIÓN COMERCIAL</p>
+          <h1>Pedidos</h1>
+          <p>Revisá cada operación y mantené su estado al día.</p>
         </div>
-
-
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-
-            setErrorPedido("");
-
-            setMostrarFormularioPedido(
-              true
-            );
-          }}
-        >
+        <button className="btn btn-primary" onClick={openCreate}>
           Nuevo pedido
         </button>
-
       </div>
-
-
-      {/* FILTROS */}
-
-      <div className="filters-card">
-
-        <div className="filters-grid">
-
-          <div className="form-group">
-
-            <label htmlFor="filtro-estado">
-              Estado
-            </label>
-
-            <select
-              id="filtro-estado"
-              value={estado}
-              onChange={(e) =>
-                setEstado(
-                  e.target.value
-                )
-              }
-            >
-
-              <option value="">
-                Todos los estados
-              </option>
-
-              <option value="Pendiente">
-                Pendiente
-              </option>
-
-              <option value="Confirmado">
-                Confirmado
-              </option>
-
-              <option value="Cancelado">
-                Cancelado
-              </option>
-
-              <option value="Entregado">
-                Entregado
-              </option>
-
-            </select>
-
-          </div>
-
-
-          <div className="form-group">
-
-            <label htmlFor="filtro-cliente">
-              Cliente
-            </label>
-
-            <select
-              id="filtro-cliente"
-              value={clienteId}
-              onChange={(e) =>
-                setClienteId(
-                  e.target.value
-                )
-              }
-            >
-
-              <option value="">
-                Todos los clientes
-              </option>
-
-              {clientes.map(
-                (cliente) => (
-
-                  <option
-                    key={cliente.id}
-                    value={cliente.id}
-                  >
-                    {cliente.nombre}{" "}
-                    {cliente.apellido}
-                  </option>
-
-                )
-              )}
-
-            </select>
-
-          </div>
-
-
-          <div className="form-group">
-
-            <label htmlFor="fecha-desde">
-              Desde
-            </label>
-
-            <input
-              id="fecha-desde"
-              type="date"
-              value={fechaDesde}
-              onChange={(e) =>
-                setFechaDesde(
-                  e.target.value
-                )
-              }
-            />
-
-          </div>
-
-
-          <div className="form-group">
-
-            <label htmlFor="fecha-hasta">
-              Hasta
-            </label>
-
-            <input
-              id="fecha-hasta"
-              type="date"
-              value={fechaHasta}
-              onChange={(e) =>
-                setFechaHasta(
-                  e.target.value
-                )
-              }
-            />
-
-          </div>
-
+      {error && !creating && (
+        <div role="alert" className="error-message">
+          {error}
         </div>
-
-
-        <div className="filters-actions">
-
+      )}
+      <div className="quick-filters" aria-label="Filtros rápidos">
+        <button className="btn btn-secondary" onClick={() => setParams({})}>
+          Todos
+        </button>
+        {["Pendiente", "Confirmado"].map((state) => (
           <button
-            className="btn btn-primary"
-            onClick={
-              handleAplicarFiltros
-            }
+            key={state}
+            className={`btn ${params.get("estado") === state ? "btn-primary" : "btn-secondary"}`}
+            onClick={() => filter("estado", state)}
           >
-            Aplicar filtros
+            {state === "Pendiente" ? "Pendientes" : "Confirmados"}
           </button>
-
-
-          <button
-            className="btn btn-secondary"
-            onClick={
-              handleLimpiarFiltros
-            }
-          >
-            Limpiar
-          </button>
-
-        </div>
-
+        ))}
+        <button
+          className="btn btn-secondary"
+          onClick={() =>
+            setParams((previous) => {
+              const next = new URLSearchParams(previous);
+              next.set("fechaDesde", today);
+              next.set("fechaHasta", today);
+              next.delete("pagina");
+              return next;
+            })
+          }
+        >
+          Hoy
+        </button>
       </div>
-
-
-      {/* MODAL NUEVO PEDIDO */}
-
-      {mostrarFormularioPedido && (
-
-        <div className="modal-overlay">
-
-          <div className="modal order-form-modal">
-
-            <div className="order-form-content">
-
-              <h2>
-                Nuevo pedido
-              </h2>
-
-
-              {/* CLIENTE */}
-
-              <div className="form-group">
-
-                <label htmlFor="pedido-cliente">
-                  Cliente
-                </label>
-
+      <div className="filters-grid filters-panel">
+        <label>
+          Estado
+          <select
+            value={params.get("estado") || ""}
+            onChange={(event) => filter("estado", event.target.value)}
+          >
+            <option value="">Todos los estados</option>
+            {states.map((state) => (
+              <option key={state}>{state}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Cliente
+          <select
+            aria-label="Filtrar por cliente"
+            value={params.get("clienteId") || ""}
+            onChange={(event) => filter("clienteId", event.target.value)}
+            disabled={!clients.data}
+          >
+            <option value="">Todos los clientes</option>
+            {clients.data?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} {c.apellido}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Desde
+          <input
+            type="date"
+            value={params.get("fechaDesde") || ""}
+            onChange={(event) => filter("fechaDesde", event.target.value)}
+          />
+        </label>
+        <label>
+          Hasta
+          <input
+            type="date"
+            value={params.get("fechaHasta") || ""}
+            onChange={(event) => filter("fechaHasta", event.target.value)}
+          />
+        </label>
+        <button className="btn btn-secondary" onClick={() => setParams({})}>
+          Limpiar filtros
+        </button>
+      </div>
+      <div className="list-caption">
+        <span>
+          {orders.loading
+            ? "Consultando pedidos…"
+            : `${orders.data?.totalRegistros || 0} operaciones encontradas`}
+        </span>
+        <button
+          className="btn btn-secondary"
+          disabled={orders.loading}
+          onClick={orders.refresh}
+        >
+          Actualizar
+        </button>
+      </div>
+      {orders.loading || orders.error || !orders.data?.items.length ? (
+        <ResourceState
+          loading={orders.loading}
+          error={orders.error}
+          empty="Aún no tenés pedidos en esta vista"
+          onRetry={orders.refresh}
+          onCreate={openCreate}
+        />
+      ) : (
+        <div className="table-container">
+          <table className="table responsive-orders">
+            <thead>
+              <tr>
+                <th>Pedido / cliente</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Total</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.data.items.map((order) => (
+                <tr key={order.id}>
+                  <td data-label="Pedido">
+                    <strong>#{order.id}</strong>
+                    <span className="cell-secondary">
+                      {order.nombreCliente}
+                    </span>
+                  </td>
+                  <td data-label="Fecha">
+                    {new Date(order.fecha).toLocaleDateString("es-AR")}
+                  </td>
+                  <td data-label="Estado">
+                    <StatusBadge estado={order.estado} />
+                  </td>
+                  <td data-label="Total">{money(order.total)}</td>
+                  <td data-label="Acciones">
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setSelected(order);
+                        setError("");
+                      }}
+                    >
+                      Ver detalle
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="pagination">
+        <button
+          className="btn btn-secondary"
+          disabled={orders.loading || page <= 1}
+          onClick={() => filter("pagina", String(page - 1))}
+        >
+          Anterior
+        </button>
+        <span>
+          Página {page} de {Math.max(1, orders.data?.totalPaginas || 1)}
+        </span>
+        <button
+          className="btn btn-secondary"
+          disabled={orders.loading || page >= (orders.data?.totalPaginas || 1)}
+          onClick={() => filter("pagina", String(page + 1))}
+        >
+          Siguiente
+        </button>
+      </div>
+      {selected && !intent && (
+        <Modal
+          title={`Pedido #${selected.id}`}
+          busy={processing}
+          onClose={() => setSelected(null)}
+        >
+          {error && (
+            <div role="alert" className="error-message">
+              {error}
+            </div>
+          )}
+          <div className="order-detail-meta">
+            <div>
+              <strong>{selected.nombreCliente}</strong>
+              <p>{new Date(selected.fecha).toLocaleString("es-AR")}</p>
+            </div>
+            <StatusBadge estado={selected.estado} />
+          </div>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Cantidad</th>
+                  <th>Precio</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selected.detalles.map((item, index) => (
+                  <tr key={`${item.productoId}-${index}`}>
+                    <td>{item.nombreProducto}</td>
+                    <td>{item.cantidad}</td>
+                    <td>{money(item.precioUnitario)}</td>
+                    <td>{money(item.subtotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="order-total">Total {money(selected.total)}</p>
+          <div className="modal-actions">
+            {selected.estado === "Pendiente" && (
+              <button
+                className="btn btn-primary"
+                disabled={processing}
+                onClick={() =>
+                  setIntent({ id: selected.id, action: "confirmar" })
+                }
+              >
+                Confirmar pedido
+              </button>
+            )}
+            {selected.estado === "Confirmado" && (
+              <button
+                className="btn btn-primary"
+                disabled={processing}
+                onClick={() =>
+                  setIntent({ id: selected.id, action: "entregar" })
+                }
+              >
+                Marcar como entregado
+              </button>
+            )}
+            {["Pendiente", "Confirmado"].includes(selected.estado) && (
+              <button
+                className="btn btn-danger"
+                disabled={processing}
+                onClick={() =>
+                  setIntent({ id: selected.id, action: "cancelar" })
+                }
+              >
+                Cancelar pedido
+              </button>
+            )}
+          </div>
+        </Modal>
+      )}
+      {intent && (
+        <ConfirmModal
+          titulo={`${intent.action === "cancelar" ? "Cancelar" : intent.action === "confirmar" ? "Confirmar" : "Entregar"} pedido #${intent.id}`}
+          mensaje={
+            intent.action === "cancelar"
+              ? "Se devolverán las unidades al inventario. Esta operación no se puede deshacer."
+              : "El estado se actualizará en el servidor. ¿Querés continuar?"
+          }
+          procesando={processing}
+          onConfirmar={() => void execute()}
+          onCancelar={() => setIntent(null)}
+        />
+      )}
+      {creating && (
+        <Modal
+          title="Nuevo pedido"
+          busy={processing}
+          onClose={() => setCreating(false)}
+        >
+          {products.loading ||
+          clients.loading ||
+          products.error ||
+          clients.error ? (
+            <ResourceState
+              loading={products.loading || clients.loading}
+              error={products.error || clients.error}
+              onRetry={() => {
+                products.refresh();
+                clients.refresh();
+              }}
+            />
+          ) : (
+            <form onSubmit={create} className="checkout-form">
+              <label>
+                Cliente
                 <select
-                  id="pedido-cliente"
-                  value={
-                    nuevoPedido.clienteId
-                  }
-                  onChange={(e) =>
-                    setNuevoPedido({
-                      ...nuevoPedido,
-
-                      clienteId:
-                        Number(
-                          e.target.value
-                        )
+                  aria-label="Cliente"
+                  required
+                  value={draft.clienteId || ""}
+                  disabled={processing}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      clienteId: Number(event.target.value),
                     })
                   }
                 >
-
-                  <option value={0}>
-                    Seleccione un cliente
-                  </option>
-
-                  {clientes.map(
-                    (cliente) => (
-
-                      <option
-                        key={cliente.id}
-                        value={cliente.id}
-                      >
-                        {cliente.nombre}{" "}
-                        {cliente.apellido}
+                  <option value="">Seleccioná un cliente</option>
+                  {clients.data
+                    ?.filter((c) => c.activo)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre} {c.apellido}
                       </option>
-
-                    )
-                  )}
-
+                    ))}
                 </select>
-
-              </div>
-
-
-              {/* PRODUCTOS */}
-
-              {nuevoPedido.detalles.map(
-                (detalle, indice) => {
-
-                  const productoSeleccionado =
-                    productos.find(
-                      (producto) =>
-                        producto.id ===
-                        detalle.productoId
-                    );
-
-
-                  const subtotal =
-                    productoSeleccionado
-                      ? productoSeleccionado.precio *
-                        detalle.cantidad
-                      : 0;
-
-
-                  return (
-
-                    <div
-                      key={indice}
-                      className="order-item-row"
-                    >
-
-                      {/* PRODUCTO */}
-
-                      <div className="form-group order-product">
-
-                        <label>
-                          Producto
-                        </label>
-
-
-                        <select
-                          className="product-select"
-                          value={
-                            detalle.productoId
-                          }
-                          onChange={(e) =>
-                            actualizarDetalle(
-                              indice,
-                              "productoId",
-                              Number(
-                                e.target.value
-                              )
-                            )
-                          }
-                        >
-
-                          <option value={0}>
-                            Seleccioná un producto
-                          </option>
-
-
-                          {productos
-                            .filter(
-                              (producto) =>
-                                producto.activo
-                            )
-                            .map(
-                              (producto) => {
-
-                                const productoUsadoEnOtraFila =
-                                  nuevoPedido.detalles.some(
-                                    (
-                                      otroDetalle,
-                                      otroIndice
-                                    ) =>
-                                      otroIndice !==
-                                        indice &&
-                                      otroDetalle.productoId ===
-                                        producto.id
-                                  );
-
-
-                                return (
-
-                                  <option
-                                    key={
-                                      producto.id
-                                    }
-                                    value={
-                                      producto.id
-                                    }
-                                    disabled={
-  productoUsadoEnOtraFila ||
-  producto.stock === 0
-}
-                                  >
-
-                                    {producto.nombre} ·{" "}
-
-                                    {producto.precio.toLocaleString(
-                                      "es-AR",
-                                      {
-                                        style:
-                                          "currency",
-
-                                        currency:
-                                          "ARS"
-                                      }
-                                    )}{" "}
-
-                                    · Stock:{" "}
-                                    {producto.stock}
-
-                                  </option>
-
-                                );
-                              }
-                            )}
-
-                        </select>
-
-
-                        {/* AHORA EL STOCK QUEDA
-                            DEBAJO DEL PRODUCTO */}
-
-                        <small className="stock-helper">
-
-                          {productoSeleccionado
-                            ? `Disponible: ${productoSeleccionado.stock}`
-                            : "\u00A0"}
-
-                        </small>
-
-                      </div>
-
-
-                      {/* CANTIDAD */}
-
-                      <div className="form-group order-quantity">
-
-                        <label>
-                          Cantidad
-                        </label>
-
-
-                        <input
-                          type="number"
-                          min={1}
-                          max={
-                            productoSeleccionado?.stock
-                          }
-                          value={
-                            detalle.cantidad
-                          }
-                          onChange={(e) =>
-                            actualizarDetalle(
-                              indice,
-                              "cantidad",
-                              Number(
-                                e.target.value
-                              )
-                            )
-                          }
-                        />
-
-
-                        {/* ESPACIO PARA MANTENER
-                            PRODUCTO Y CANTIDAD
-                            PERFECTAMENTE ALINEADOS */}
-
-                        <small
-                          className="stock-helper"
-                          aria-hidden="true"
-                        >
-                          {"\u00A0"}
-                        </small>
-
-                      </div>
-
-
-                      {/* SUBTOTAL */}
-
-                      <div className="order-line-subtotal">
-
-                        <span>
-                          Subtotal
-                        </span>
-
-
-                        <strong>
-
-                          {subtotal.toLocaleString(
-                            "es-AR",
-                            {
-                              style:
-                                "currency",
-
-                              currency:
-                                "ARS"
-                            }
-                          )}
-
-                        </strong>
-
-                      </div>
-
-
-                      {/* QUITAR */}
-
-                      {nuevoPedido.detalles.length >
-                        1 && (
-
-                        <button
-                          className="btn btn-danger order-remove"
-                          type="button"
-                          onClick={() =>
-                            quitarDetalle(
-                              indice
-                            )
-                          }
-                        >
-                          Quitar
-                        </button>
-
-                      )}
-
-                    </div>
-
-                  );
-                }
-              )}
-
-
-              {/* AGREGAR PRODUCTO */}
-
-              <div className="add-product-row">
-
-                <button
-                  className="btn btn-add-product"
-                  type="button"
-                  onClick={
-                    agregarDetalle
-                  }
-                >
-                  + Agregar otro producto
-                </button>
-
-              </div>
-
-
-              {/* TOTAL ESTIMADO */}
-
-              <div className="order-preview-total">
-
-                <span>
-                  Total estimado
-                </span>
-
-
-                <strong>
-
-                  {totalEstimado.toLocaleString(
-                    "es-AR",
-                    {
-                      style:
-                        "currency",
-
-                      currency:
-                        "ARS"
-                    }
-                  )}
-
-                </strong>
-
-              </div>
-
-
-              {/* ERROR */}
-
-              {errorPedido && (
-
-                <div className="error-message">
-                  {errorPedido}
-                </div>
-
-              )}
-
-
-              {/* ACCIONES */}
-
-              <div className="order-form-actions">
-
-                <button
-  className="btn btn-primary"
-  type="button"
-  disabled={creandoPedido}
-  onClick={handleCrearPedido}
->
-  {creandoPedido
-    ? "Guardando..."
-    : "Guardar pedido"}
-</button>
-
-
-             <button
-  className="btn btn-secondary"
-  type="button"
-  disabled={creandoPedido}
-  onClick={() => {
-
-    setMostrarFormularioPedido(false);
-
-    setErrorPedido("");
-
-    setNuevoPedido({
-      clienteId: 0,
-      detalles: [
-        {
-          productoId: 0,
-          cantidad: 1
-        }
-      ]
-    });
-  }}
->
-  Cancelar
-</button>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      )}
-
-
-      {/* TABLA DE PEDIDOS */}
-
-      <div className="table-card">
-
-        <table className="data-table">
-
-          <thead>
-
-            <tr>
-              <th>ID</th>
-              <th>Cliente</th>
-              <th>Fecha</th>
-              <th>Estado</th>
-              <th>Total</th>
-              <th>Acciones</th>
-            </tr>
-
-          </thead>
-
-
-          <tbody>
-
-  {cargandoPedidos ? (
-
-    <tr>
-      <td colSpan={6}>
-        Cargando pedidos...
-      </td>
-    </tr>
-
-  ) : pedidos.length === 0 ? (
-
-    <tr>
-      <td colSpan={6}>
-        {hayFiltrosAplicados
-          ? "No se encontraron pedidos con los filtros seleccionados."
-          : "No hay pedidos registrados."}
-      </td>
-    </tr>
-
-  ) : (
-
-    pedidos.map(
-      (pedido) => (
-
-        <tr key={pedido.id}>
-
-          <td>
-            {pedido.id}
-          </td>
-
-          <td>
-            {pedido.nombreCliente}
-          </td>
-
-          <td>
-            {new Date(
-              pedido.fecha
-            ).toLocaleString(
-              "es-AR"
-            )}
-          </td>
-
-          <td>
-            <span
-              className={`order-status order-status-${pedido.estado.toLowerCase()}`}
-            >
-              {pedido.estado}
-            </span>
-          </td>
-
-          <td>
-            {pedido.total.toLocaleString(
-              "es-AR",
-              {
-                style: "currency",
-                currency: "ARS"
-              }
-            )}
-          </td>
-
-          <td>
-            <button
-              className="btn btn-edit"
-              onClick={() => {
-
-                setErrorAccionPedido("");
-
-                setPedidoSeleccionado(
-                  pedido
-                );
-              }}
-            >
-              Ver detalle
-            </button>
-          </td>
-
-        </tr>
-
-      )
-    )
-
-  )}
-
-</tbody>
-
-        </table>
-
-
-        {/* PAGINACIÓN */}
-
-        <div className="pagination">
-
-          <button
-            className="btn btn-secondary"
-            onClick={() =>
-              setPagina(
-                pagina - 1
-              )
-            }
-           disabled={
-  pagina === 1 ||
-  cargandoPedidos
-}
-          >
-            Anterior
-          </button>
-
-
-          <span className="pagination-info">
-
-            Página{" "}
-
-            <strong>
-              {pagina}
-            </strong>
-
-            {" "}de{" "}
-
-            <strong>
-              {totalPaginas}
-            </strong>
-
-          </span>
-
-
-          <button
-            className="btn btn-secondary"
-            onClick={() =>
-              setPagina(
-                pagina + 1
-              )
-            }
-            disabled={
-  pagina >= totalPaginas ||
-  cargandoPedidos
-}
-          >
-            Siguiente
-          </button>
-
-        </div>
-
-      </div>
-
-
-      {/* MODAL DETALLE PEDIDO */}
-
-      {pedidoSeleccionado && (
-
-        <div className="modal-overlay">
-
-          <div className="modal order-detail-modal">
-
-            <div className="order-detail-content">
-
-              <div className="order-detail-header">
-
-                <div>
-
-                  <h2>
-                    Pedido #
-                    {pedidoSeleccionado.id}
-                  </h2>
-
-                  <p>
-                    {
-                      pedidoSeleccionado.nombreCliente
-                    }
-                  </p>
-
-                </div>
-
-
-                <span
-                  className={`order-status order-status-${pedidoSeleccionado.estado.toLowerCase()}`}
-                >
-                  {
-                    pedidoSeleccionado.estado
-                  }
-                </span>
-
-              </div>
-
-
-              {/* ERROR */}
-
-              {errorAccionPedido && (
-
-                <div className="error-message">
-                  {errorAccionPedido}
-                </div>
-
-              )}
-
-
-              {/* DETALLES */}
-
-              <div className="order-detail-table">
-
-                <table className="data-table">
-
-                  <thead>
-
-                    <tr>
-                      <th>Producto</th>
-                      <th>Cantidad</th>
-                      <th>
-                        Precio unitario
-                      </th>
-                      <th>Subtotal</th>
-                    </tr>
-
-                  </thead>
-
-
-                  <tbody>
-
-                    {pedidoSeleccionado.detalles.map(
-                      (detalle) => (
-
-                        <tr
-                          key={
-                            detalle.productoId
-                          }
-                        >
-
-                          <td>
-                            {
-                              detalle.nombreProducto
-                            }
-                          </td>
-
-
-                          <td>
-                            {
-                              detalle.cantidad
-                            }
-                          </td>
-
-
-                          <td>
-
-                            {detalle.precioUnitario.toLocaleString(
-                              "es-AR",
-                              {
-                                style:
-                                  "currency",
-
-                                currency:
-                                  "ARS"
-                              }
-                            )}
-
-                          </td>
-
-
-                          <td>
-
-                            {detalle.subtotal.toLocaleString(
-                              "es-AR",
-                              {
-                                style:
-                                  "currency",
-
-                                currency:
-                                  "ARS"
-                              }
-                            )}
-
-                          </td>
-
-                        </tr>
-
-                      )
-                    )}
-
-                  </tbody>
-
-                </table>
-
-              </div>
-
-
-              {/* TOTAL */}
-
-              <div className="order-total">
-
-                <span>
-                  Total
-                </span>
-
-
-                <strong>
-
-                  {pedidoSeleccionado.total.toLocaleString(
-                    "es-AR",
-                    {
-                      style:
-                        "currency",
-
-                      currency:
-                        "ARS"
-                    }
-                  )}
-
-                </strong>
-
-              </div>
-
-
-              {/* ACCIONES */}
-
-              <div className="modal-actions">
-
-
-                {pedidoSeleccionado.estado ===
-                  "Pendiente" && (
-
-                  <>
-
-                   <button
-  className="btn btn-primary"
-  disabled={procesandoAccionPedido}
-  onClick={() =>
-    handleConfirmarPedido(
-      pedidoSeleccionado.id
-    )
-  }
->
-  {procesandoAccionPedido
-    ? "Confirmando..."
-    : "Confirmar"}
-</button>
-
-
-                   <button
-  className="btn btn-danger"
-  disabled={procesandoAccionPedido}
-  onClick={() =>
-    setPedidoACancelar(
-      pedidoSeleccionado
-    )
-  }
->
-  Cancelar pedido
-</button>
-
-                  </>
-
-                )}
-
-
-                {pedidoSeleccionado.estado ===
-                  "Confirmado" && (
-
-                  <>
-
+              </label>
+              <fieldset disabled={processing}>
+                <legend>Productos del pedido</legend>
+                {draft.detalles.map((item, index) => (
+                  <div className="cart-line-editor" key={index}>
+                    <label>
+                      Producto
+                      <select
+                        aria-label="Producto"
+                        required
+                        value={item.productoId || ""}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            detalles: draft.detalles.map((line, i) =>
+                              i === index
+                                ? {
+                                    ...line,
+                                    productoId: Number(event.target.value),
+                                  }
+                                : line,
+                            ),
+                          })
+                        }
+                      >
+                        <option value="">Seleccioná un producto</option>
+                        {products.data
+                          ?.filter((p) => p.activo && p.stock > 0)
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.nombre} · stock {p.stock}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <label>
+                      Cantidad
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        max={
+                          products.data?.find((p) => p.id === item.productoId)
+                            ?.stock || 2147483647
+                        }
+                        value={item.cantidad}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            detalles: draft.detalles.map((line, i) =>
+                              i === index
+                                ? {
+                                    ...line,
+                                    cantidad: Number(event.target.value),
+                                  }
+                                : line,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
                     <button
-  className="btn btn-primary"
-  disabled={procesandoAccionPedido}
-  onClick={() =>
-    handleEntregarPedido(
-      pedidoSeleccionado.id
-    )
-  }
->
-  {procesandoAccionPedido
-    ? "Procesando..."
-    : "Marcar como entregado"}
-</button>
-
-
-                    <button
-                      className="btn btn-danger"
+                      className="btn btn-secondary"
+                      type="button"
+                      aria-label={`Quitar producto ${index + 1}`}
+                      disabled={draft.detalles.length === 1}
                       onClick={() =>
-                       setPedidoACancelar(
-  pedidoSeleccionado
-)
+                        setDraft({
+                          ...draft,
+                          detalles: draft.detalles.filter(
+                            (_, i) => i !== index,
+                          ),
+                        })
                       }
                     >
-                      Cancelar pedido
+                      Quitar
                     </button>
-
-                  </>
-
-                )}
-
-
+                  </div>
+                ))}
                 <button
+                  type="button"
                   className="btn btn-secondary"
-                    disabled={procesandoAccionPedido}
-                  onClick={() => {
-
-                    setErrorAccionPedido(
-                      ""
-                    );
-
-                    setPedidoSeleccionado(
-                      null
-                    );
-                  }}
+                  disabled={draft.detalles.length >= 100}
+                  onClick={() =>
+                    setDraft({
+                      ...draft,
+                      detalles: [
+                        ...draft.detalles,
+                        { productoId: 0, cantidad: 1 },
+                      ],
+                    })
+                  }
                 >
-                  Cerrar
+                  Agregar producto
                 </button>
-
+              </fieldset>
+              {error && (
+                <div role="alert" className="error-message">
+                  {error}
+                </div>
+              )}
+              <div className="checkout-summary">
+                <div>
+                  <small>Total estimado · confirmado por la API</small>
+                  <strong>{money(estimate)}</strong>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  disabled={
+                    processing ||
+                    !clients.data?.length ||
+                    !products.data?.length
+                  }
+                >
+                  {processing && <span className="spinner" />}
+                  {processing ? "Creando pedido…" : "Crear pedido"}
+                </button>
               </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
+            </form>
+          )}
+        </Modal>
       )}
-{pedidoACancelar && (
-  <ConfirmModal
-    titulo="Cancelar pedido"
-    mensaje={`¿Estás seguro de que querés cancelar el pedido #${pedidoACancelar.id}?`}
-    textoConfirmar="Cancelar pedido"
-    procesando={cancelandoPedido}
-    onConfirmar={handleCancelarPedido}
-    onCancelar={() =>
-      setPedidoACancelar(null)
-    }
-  />
-)}
-{mensajeExito && (
-  <Toast
-    mensaje={mensajeExito}
-    tipo="success"
-    onCerrar={() =>
-      setMensajeExito("")
-    }
-  />
-)}
+      {success && <Toast mensaje={success} onCerrar={() => setSuccess("")} />}
     </div>
-
   );
 }
-
-
-export default Pedidos;

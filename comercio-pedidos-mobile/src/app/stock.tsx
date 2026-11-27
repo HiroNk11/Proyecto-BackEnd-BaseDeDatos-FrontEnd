@@ -1,34 +1,21 @@
+import { errorMessage } from "../lib/problem";
 import { useEffect, useState } from "react";
-import {
-    FlatList,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import MovimientoStockModal from "@/components/MovimientoStockModal";
-import type {
-    MovimientosStockPaginados,
-} from "../models/MovimientoStock";
-import type {
-    TipoMovimientoManual,
-} from "../services/movimientoStockService";
-import {
-    obtenerMovimientosStock,
-} from "../services/movimientoStockService";
-
+import type { MovimientosStockPaginados } from "../models/MovimientoStock";
+import type { TipoMovimientoManual } from "../services/movimientoStockService";
+import { obtenerMovimientosStock } from "../services/movimientoStockService";
 
 export default function StockScreen() {
+  const [tipoManual, setTipoManual] = useState<TipoMovimientoManual | null>(
+    null,
+  );
 
-    const [tipoManual, setTipoManual] =
-  useState<TipoMovimientoManual | null>(null);
+  const [mensajeExito, setMensajeExito] = useState("");
 
-const [mensajeExito, setMensajeExito] = useState("");
-
-  const [datos, setDatos] =
-    useState<MovimientosStockPaginados | null>(null);
+  const [datos, setDatos] = useState<MovimientosStockPaginados | null>(null);
   const [pagina, setPagina] = useState(1);
   const [recarga, setRecarga] = useState(0);
   const [cargando, setCargando] = useState(true);
@@ -57,24 +44,24 @@ const [mensajeExito, setMensajeExito] = useState("");
     setDatos(null);
     setPagina(nuevaPagina);
   };
-const movimientoRegistrado = () => {
-  setMensajeExito(
-    tipoManual === "Entrada"
-      ? "Entrada registrada correctamente."
-      : "Salida registrada correctamente."
-  );
+  const movimientoRegistrado = () => {
+    setMensajeExito(
+      tipoManual === "Entrada"
+        ? "Entrada registrada correctamente."
+        : "Salida registrada correctamente.",
+    );
 
-  setTipoManual(null);
-  setError("");
-  setCargando(true);
+    setTipoManual(null);
+    setError("");
+    setCargando(true);
 
-  if (pagina === 1) {
-    setRecarga((valor) => valor + 1);
-  } else {
-    setDatos(null);
-    setPagina(1);
-  }
-};
+    if (pagina === 1) {
+      setRecarga((valor) => valor + 1);
+    } else {
+      setDatos(null);
+      setPagina(1);
+    }
+  };
   useEffect(() => {
     let activo = true;
 
@@ -87,9 +74,7 @@ const movimientoRegistrado = () => {
       .catch((error: unknown) => {
         if (activo) {
           setError(
-            error instanceof Error
-              ? error.message
-              : "No se pudieron cargar los movimientos."
+            errorMessage(error, "No se pudieron cargar los movimientos."),
           );
         }
       })
@@ -105,10 +90,7 @@ const movimientoRegistrado = () => {
   }, [pagina, recarga]);
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["top", "left", "right"]}
-    >
+    <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <FlatList
         data={datos?.items ?? []}
         keyExtractor={(movimiento) => movimiento.id.toString()}
@@ -119,44 +101,41 @@ const movimientoRegistrado = () => {
           <View style={styles.encabezado}>
             <Text style={styles.marca}>ComercioPedidos</Text>
             <Text style={styles.titulo}>Movimientos de stock</Text>
-<View style={styles.fila}>
-  <Pressable
-    accessibilityRole="button"
-    disabled={cargando}
-    style={[
-      styles.boton,
-      cargando && styles.deshabilitado,
-    ]}
-    onPress={() => {
-      setMensajeExito("");
-      setTipoManual("Entrada");
-    }}
-  >
-    <Text style={styles.botonTexto}>+ Entrada</Text>
-  </Pressable>
+            <View style={styles.fila}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={cargando}
+                style={[styles.boton, cargando && styles.deshabilitado]}
+                onPress={() => {
+                  setMensajeExito("");
+                  setTipoManual("Entrada");
+                }}
+              >
+                <Text style={styles.botonTexto}>+ Entrada</Text>
+              </Pressable>
 
-  <Pressable
-    accessibilityRole="button"
-    disabled={cargando}
-    style={[
-      styles.boton,
-      { backgroundColor: "#dc2626" },
-      cargando && styles.deshabilitado,
-    ]}
-    onPress={() => {
-      setMensajeExito("");
-      setTipoManual("Salida");
-    }}
-  >
-    <Text style={styles.botonTexto}>− Salida</Text>
-  </Pressable>
-</View>
+              <Pressable
+                accessibilityRole="button"
+                disabled={cargando}
+                style={[
+                  styles.boton,
+                  { backgroundColor: "#dc2626" },
+                  cargando && styles.deshabilitado,
+                ]}
+                onPress={() => {
+                  setMensajeExito("");
+                  setTipoManual("Salida");
+                }}
+              >
+                <Text style={styles.botonTexto}>− Salida</Text>
+              </Pressable>
+            </View>
 
-{mensajeExito !== "" && (
-  <Text style={{ color: "#166534", fontWeight: "600" }}>
-    {mensajeExito}
-  </Text>
-)}
+            {mensajeExito !== "" && (
+              <Text style={{ color: "#166534", fontWeight: "600" }}>
+                {mensajeExito}
+              </Text>
+            )}
             <Text style={styles.texto}>
               {cargando
                 ? "Cargando movimientos..."
@@ -189,9 +168,7 @@ const movimientoRegistrado = () => {
         }
         ListEmptyComponent={
           !cargando && !error ? (
-            <Text style={styles.texto}>
-              No hay movimientos en esta página.
-            </Text>
+            <Text style={styles.texto}>No hay movimientos en esta página.</Text>
           ) : null
         }
         renderItem={({ item }) => (
@@ -202,9 +179,7 @@ const movimientoRegistrado = () => {
               <Text
                 style={[
                   styles.tipo,
-                  item.tipo === "Entrada"
-                    ? styles.entrada
-                    : styles.salida,
+                  item.tipo === "Entrada" ? styles.entrada : styles.salida,
                 ]}
               >
                 {item.tipo}
@@ -251,8 +226,7 @@ const movimientoRegistrado = () => {
                   onPress={() => cambiarPagina(datos.pagina - 1)}
                   style={[
                     styles.boton,
-                    (cargando || datos.pagina <= 1) &&
-                      styles.deshabilitado,
+                    (cargando || datos.pagina <= 1) && styles.deshabilitado,
                   ]}
                 >
                   <Text style={styles.botonTexto}>Anterior</Text>
@@ -260,14 +234,11 @@ const movimientoRegistrado = () => {
 
                 <Pressable
                   accessibilityRole="button"
-                  disabled={
-                    cargando || datos.pagina >= datos.totalPaginas
-                  }
+                  disabled={cargando || datos.pagina >= datos.totalPaginas}
                   onPress={() => cambiarPagina(datos.pagina + 1)}
                   style={[
                     styles.boton,
-                    (cargando ||
-                      datos.pagina >= datos.totalPaginas) &&
+                    (cargando || datos.pagina >= datos.totalPaginas) &&
                       styles.deshabilitado,
                   ]}
                 >
@@ -276,17 +247,15 @@ const movimientoRegistrado = () => {
               </View>
             </View>
           ) : null
-          
         }
-        
       />
       {tipoManual !== null && (
-  <MovimientoStockModal
-    tipo={tipoManual}
-    onCerrar={() => setTipoManual(null)}
-    onRegistrado={movimientoRegistrado}
-  />
-)}
+        <MovimientoStockModal
+          tipo={tipoManual}
+          onCerrar={() => setTipoManual(null)}
+          onRegistrado={movimientoRegistrado}
+        />
+      )}
     </SafeAreaView>
   );
 }

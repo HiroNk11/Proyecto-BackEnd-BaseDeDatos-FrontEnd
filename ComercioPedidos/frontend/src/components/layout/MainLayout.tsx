@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import SessionBoundary from "../SessionBoundary";
 
 function MainLayout() {
   return (
@@ -11,7 +12,9 @@ function MainLayout() {
         <Header />
 
         <main className="main-content">
-          <Outlet />
+          <SessionBoundary>
+            <Outlet />
+          </SessionBoundary>
         </main>
       </div>
     </div>
