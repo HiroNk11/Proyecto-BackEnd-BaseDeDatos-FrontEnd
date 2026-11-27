@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { API_BASE_URL } from "./http";
 
 import type {
   MovimientoStock
@@ -22,8 +22,7 @@ export interface RegistrarMovimientoStock {
   motivo?: string;
 }
 
-const API_URL =
-  "https://localhost:7072/api/movimientos-stock";
+const API_URL = API_BASE_URL + '/movimientos-stock';
 
 export const obtenerMovimientosStock =
   async (

@@ -62,6 +62,9 @@ public class ProductoService : IProductoService
         {
             return false;
         }
+        if (await _context.DetallesPedidos.AnyAsync(d => d.ProductoId == id) ||
+            await _context.MovimientosStock.AnyAsync(m => m.ProductoId == id))
+            throw new ComercioPedidos.Application.Exceptions.ConflictoException("No se puede eliminar un producto con historial.");
 
         _context.Productos.Remove(producto);
         await _context.SaveChangesAsync();

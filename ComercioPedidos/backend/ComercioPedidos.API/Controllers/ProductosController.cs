@@ -1,4 +1,6 @@
-﻿using ComercioPedidos.Application.DTO;
+using Microsoft.AspNetCore.Authorization;
+using ComercioPedidos.API.Security;
+using ComercioPedidos.Application.DTO;
 using ComercioPedidos.Application.Entitites;
 using ComercioPedidos.Application.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ComercioPedidos.API.Controllers
 {
 
+    [Authorize(Policy = Policies.Orders)]
     [ApiController]
     [Route("api/[controller]")]
     public class ProductosController : ControllerBase
@@ -36,6 +39,7 @@ namespace ComercioPedidos.API.Controllers
 
             return Ok(producto);
         }
+        [Authorize(Policy = Policies.Staff)]
         [HttpPost]
         public async Task<ActionResult<Producto>> AddProduct(CrearProductoDto productoDto)
         {
@@ -48,6 +52,7 @@ namespace ComercioPedidos.API.Controllers
                                  
         }
 
+        [Authorize(Policy = Policies.Staff)]
         [HttpPut("{id}")]
         public async Task<ActionResult<Producto>> UpdateProduct(int id, ActualizarProductoDto productoDto)
         {
@@ -61,6 +66,7 @@ namespace ComercioPedidos.API.Controllers
           return Ok(producto);
          }
 
+        [Authorize(Policy = Policies.Admin)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {

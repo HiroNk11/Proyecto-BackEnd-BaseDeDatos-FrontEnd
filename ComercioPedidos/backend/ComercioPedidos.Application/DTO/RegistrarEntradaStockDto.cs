@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace ComercioPedidos.Application.DTO
 {
     public class RegistrarEntradaStockDto
     {
-        [Required]
+        [Range(1, int.MaxValue)]
         public int ProductoId { get; set; }
 
         [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor que cero.")]

@@ -1,4 +1,4 @@
-import axios from "axios"; //   
+import axios, { API_BASE_URL } from "./http"; //
 import type {
   Pedido,
   ResultadoPaginado,
@@ -6,7 +6,7 @@ import type {
 } from "../models/Pedido";
 
 
-const API_URL = "https://localhost:7072/api/Pedidos";
+const API_URL = API_BASE_URL + '/Pedidos';
 
 export interface FiltrosPedidos {
   pagina?: number;

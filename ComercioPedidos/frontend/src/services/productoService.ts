@@ -1,7 +1,7 @@
-import axios from "axios"; // importa la biblioteca axios para realizar solicitudes HTTP
+import axios, { API_BASE_URL } from "./http"; // importa la biblioteca axios para realizar solicitudes HTTP
 import type { Producto, CrearProducto } from "../models/Producto"; // importa la interfaz Producto desde el archivo models/Producto.ts 
 
-const API_URL = "https://localhost:7072/api/Productos"; // Define la URL base de la API para obtener los productos
+const API_URL = API_BASE_URL + '/Productos'; // Define la URL base de la API para obtener los productos
 
 //  Define una función asíncrona llamada obtenerProductos que devuelve una promesa que resuelve un arreglo de objetos Producto
 export const obtenerProductos = async (): Promise<Producto[]> => { // Define una función asíncrona llamada obtenerProductos que devuelve una promesa que resuelve un arreglo de objetos Producto

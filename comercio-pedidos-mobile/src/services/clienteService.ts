@@ -1,3 +1,4 @@
+import { authorizedFetch as fetch } from './authorizedFetch';
 import type { Cliente } from "../models/Cliente";
 
 import { API_URL } from "../config/api";

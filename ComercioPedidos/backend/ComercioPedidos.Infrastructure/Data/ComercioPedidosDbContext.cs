@@ -1,4 +1,4 @@
-﻿using ComercioPedidos.Application.Entitites;
+using ComercioPedidos.Application.Entitites;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,8 @@ namespace ComercioPedidos.Infrastructure.Data
         public DbSet<Proveedor> Proveedores { get; set; } // 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Producto>().Property(p => p.Stock).IsConcurrencyToken();
+            modelBuilder.Entity<Pedido>().Property(p => p.Estado).IsConcurrencyToken();
             modelBuilder.Entity<Producto>(entity =>
             {
                 entity.HasKey(p => p.Id);

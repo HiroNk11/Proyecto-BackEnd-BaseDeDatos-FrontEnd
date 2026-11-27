@@ -1,3 +1,4 @@
+import { authorizedFetch as fetch } from './authorizedFetch';
 import { API_URL } from "../config/api";
 import type { Producto } from "../models/Producto";
 

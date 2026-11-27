@@ -1,8 +1,8 @@
-import axios from "axios"; 
+import axios, { API_BASE_URL } from "./http";
 import type { Cliente , CrearCliente } from "../models/Cliente"; 
 
 
-const API_URL = "https://localhost:7072/api/Clientes"; 
+const API_URL = API_BASE_URL + '/Clientes';
 
 export const obtenerClientes = async (): Promise<Cliente[]> => { 
     const respuesta = await axios.get<Cliente[]>(API_URL); 

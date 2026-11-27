@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -20,6 +20,7 @@ namespace ComercioPedidos.Application.DTO
         [StringLength(150, ErrorMessage = "El email no puede superar los 150 caracteres.")]
         public string Email { get; set; } = string.Empty;
 
+        [StringLength(30)]
         [Phone(ErrorMessage = "El teléfono no es válido.")]
         public string? Telefono { get; set; }
 
