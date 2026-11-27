@@ -139,7 +139,7 @@ export default function PedidosScreen() {
                 </Pressable>
               ))}
             </ScrollView>
-            {success && (
+            {success.length > 0 && (
               <Text accessibilityRole="alert" style={s.success}>
                 {success}
               </Text>
@@ -261,7 +261,7 @@ export default function PedidosScreen() {
               </Pressable>
               <Text style={s.title}>Pedido #{selected.id}</Text>
               <StatusBadge estado={selected.estado} />
-              {detailError && (
+              {detailError.length > 0 && (
                 <Text accessibilityRole="alert" style={{ color: "#a13d35" }}>
                   {detailError}
                 </Text>

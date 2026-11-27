@@ -177,6 +177,9 @@ async function web(browser) {
   const state = fixtures();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", message => {
+    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:")) errors.push(message.text());
+  });
   await mock(page, state);
   await page.goto("http://127.0.0.1:4175/pedidos");
   await page
@@ -282,6 +285,9 @@ async function mobile(browser) {
   const state = fixtures();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", message => {
+    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:")) errors.push(message.text());
+  });
   await mock(page, state);
   await page.goto("http://localhost:8087");
   await page

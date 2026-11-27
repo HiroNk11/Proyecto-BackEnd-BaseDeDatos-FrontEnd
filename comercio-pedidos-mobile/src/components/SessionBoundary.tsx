@@ -70,7 +70,7 @@ export default function SessionBoundary({ children }: { children: ReactNode }) {
                   <Text style={s.link}>Borrar sesión</Text>
                 </Pressable>
               </View>
-              {error && (
+              {error.length > 0 && (
                 <Text accessibilityRole="alert" style={s.error}>
                   {error}
                 </Text>

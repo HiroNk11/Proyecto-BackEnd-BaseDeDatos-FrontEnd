@@ -231,7 +231,7 @@ export default function NuevoPedidoModal({ onCerrar, onCreado }: Props) {
                 ))}
               </>
             )}
-            {error && (
+            {error.length > 0 && (
               <Text accessibilityRole="alert" style={s.error}>
                 {error}
               </Text>

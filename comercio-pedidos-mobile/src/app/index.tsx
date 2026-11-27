@@ -71,7 +71,7 @@ export default function ProductosScreen() {
             >
               <Text style={styles.botonTexto}>Armar pedido</Text>
             </Pressable>
-            {success && (
+            {success.length > 0 && (
               <Text accessibilityRole="alert" style={{ color: "#226445" }}>
                 {success}
               </Text>
