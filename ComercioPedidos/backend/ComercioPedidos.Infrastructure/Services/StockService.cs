@@ -1,4 +1,4 @@
-﻿using ComercioPedidos.Application.DTO;
+using ComercioPedidos.Application.DTO;
 using ComercioPedidos.Application.DTO.ComercioPedidos.Application.DTO;
 using ComercioPedidos.Application.Entitites;
 using ComercioPedidos.Application.Enum;
@@ -39,7 +39,7 @@ namespace ComercioPedidos.Infrastructure.Services
 
             if (producto.Stock < cantidad)
             {
-                throw new ReglaNegocioException(
+                throw new ConflictoException(
                     $"Stock insuficiente para el producto {producto.Nombre}."
                 );
             }
@@ -81,7 +81,7 @@ namespace ComercioPedidos.Infrastructure.Services
 
             int stockAnterior = producto.Stock;
 
-            producto.Stock += cantidad;
+            producto.Stock = checked(producto.Stock + cantidad);
 
             var movimiento = new MovimientoStock
             {
@@ -116,7 +116,7 @@ namespace ComercioPedidos.Infrastructure.Services
                 );
             }
 
-            if (tamanioPagina > 100)
+            if (tamanioPagina > 100 || (long)(pagina - 1) * tamanioPagina > int.MaxValue)
             {
                 throw new ReglaNegocioException(
                     "El tamaño de página no puede ser mayor a 100."

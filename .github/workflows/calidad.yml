@@ -1,0 +1,36 @@
+name: Calidad Etapa 1
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore ComercioPedidos/backend/ComercioPedidos.slnx
+      - run: dotnet build ComercioPedidos/backend/ComercioPedidos.slnx --no-restore --no-incremental -warnaserror
+      - run: dotnet test ComercioPedidos/backend/ComercioPedidos.slnx --no-build
+  clients:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [ComercioPedidos/frontend, comercio-pedidos-mobile]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - run: npx tsc --noEmit
+      - if: matrix.project == 'ComercioPedidos/frontend'
+        run: npm run build
+      - run: npm run lint

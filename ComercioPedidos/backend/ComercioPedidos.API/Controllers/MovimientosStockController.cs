@@ -1,10 +1,13 @@
-﻿using ComercioPedidos.Application.DTO;
+using Microsoft.AspNetCore.Authorization;
+using ComercioPedidos.API.Security;
+using ComercioPedidos.Application.DTO;
 using ComercioPedidos.Application.Enum;
 using ComercioPedidos.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ComercioPedidos.API.Controllers
 {
+    [Authorize(Policy = Policies.Staff)]
     [ApiController]
     [Route("api/movimientos-stock")]
     public class MovimientosStockController : ControllerBase

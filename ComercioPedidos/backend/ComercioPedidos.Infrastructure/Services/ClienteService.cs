@@ -65,6 +65,8 @@ namespace ComercioPedidos.Infrastructure.Services
             {
                 return false;
             }
+            if (await _context.Pedidos.AnyAsync(p => p.ClienteId == id))
+                throw new ComercioPedidos.Application.Exceptions.ConflictoException("No se puede eliminar un cliente con pedidos.");
             _context.Clientes.Remove(client);
             await _context.SaveChangesAsync();
             return true;

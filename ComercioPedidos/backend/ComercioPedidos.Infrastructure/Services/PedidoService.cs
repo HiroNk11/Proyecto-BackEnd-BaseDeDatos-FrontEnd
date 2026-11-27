@@ -1,423 +1,94 @@
-﻿using ComercioPedidos.Application.DTO;
+using ComercioPedidos.Application.DTO;
 using ComercioPedidos.Application.Entitites;
 using ComercioPedidos.Application.Services;
 using ComercioPedidos.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using ComercioPedidos.Application.Exceptions;
 using ComercioPedidos.Application.Enums;
+using ComercioPedidos.Application.Rules;
 
+namespace ComercioPedidos.Infrastructure.Services;
 
-namespace ComercioPedidos.Infrastructure.Services
+public sealed class PedidoService(ComercioPedidosDbContext context, IStockService stockService) : IPedidoService
 {
-    public class PedidoService : IPedidoService
+    public async Task<ResultadoPaginado<PedidoDto>> ObtenerPedidosAsync(EstadoPedido? estado, int? clienteId, DateTime? fechaDesde, DateTime? fechaHasta, int pagina = 1, int tamanioPagina = 10)
     {
-        private readonly ComercioPedidosDbContext _context;
-        private readonly IStockService _stockService;
-
-        public PedidoService(
-            ComercioPedidosDbContext context,
-            IStockService stockService
-        )
-        {
-            _context = context;
-            _stockService = stockService;
-        }
-        public async Task<ResultadoPaginado<PedidoDto>> ObtenerPedidosAsync(EstadoPedido? estado, int? clienteId, DateTime? fechaDesde, DateTime? fechaHasta, int pagina = 1, int tamanioPagina = 10)
-        {
-            var query = _context.Pedidos
-            .AsNoTracking()
-            .Include(p => p.Cliente)
-            .Include(p => p.Detalles)
-            .ThenInclude(d => d.Producto)
-            .AsQueryable();
-
-            if (estado.HasValue)
-            {
-                query = query.Where(p => p.Estado == estado.Value);
-            }
-            if (clienteId.HasValue)
-            {
-                query = query.Where(p => p.ClienteId == clienteId.Value);
-            }
-            if (fechaDesde.HasValue &&
-                fechaHasta.HasValue &&
-                fechaDesde.Value > fechaHasta.Value)
-               {
-                throw new ReglaNegocioException(
-                    "La fecha desde no puede ser mayor que la fecha hasta."
-                );
-            }
-            if (fechaDesde.HasValue)
-            {
-                var inicioDia = fechaDesde.Value.Date;
-
-                query = query.Where(p => p.Fecha >= inicioDia);  
-            }
-            if (fechaHasta.HasValue)
-            {
-                var diaSiguiente = fechaHasta.Value.Date.AddDays(1);
-
-                query = query.Where(p => p.Fecha < diaSiguiente);
-            }
-
-
-            if (pagina <= 0 || tamanioPagina <= 0)
-            {
-                throw new ReglaNegocioException(
-                    "El número de página y el tamaño de página deben ser mayores que cero."
-                );
-            }
-
-            if (tamanioPagina > 100)
-            {
-                throw new ReglaNegocioException(
-                    "El tamaño de página no puede ser mayor a 100."
-                );
-            }
-
-            var totalRegistros = await query.CountAsync();
-            query = query
-            .OrderByDescending(p => p.Fecha)                        // Primero ordená del pedido más reciente al más antiguo. Si dos tienen la misma fecha, poné primero el que tenga mayor Id.
-            .ThenByDescending(p => p.Id);
-            var registrosASaltar = (pagina - 1) * tamanioPagina;
-
-            var pedidos = await  query
-            .Skip(registrosASaltar)
-            .Take(tamanioPagina)
-            .ToListAsync();
-
-
-            var items = pedidos.Select(p => new PedidoDto
-            {
-                Id = p.Id,
-                ClienteId = p.ClienteId,
-                NombreCliente = $"{p.Cliente.Nombre} {p.Cliente.Apellido}",
-                Fecha = p.Fecha,
-                Estado = p.Estado.ToString(),
-                Total = p.Total,
-                Detalles = p.Detalles.Select(d => new DetallePedidoDto
-                {
-                    ProductoId = d.ProductoId,
-                    NombreProducto = d.Producto.Nombre,
-                    Cantidad = d.Cantidad,
-                    PrecioUnitario = d.PrecioUnitario,
-                    Subtotal = d.Cantidad * d.PrecioUnitario
-                }).ToList()
-            });
-            return new ResultadoPaginado<PedidoDto>
-            {
-                Items = items,
-                Pagina = pagina,
-                TamanioPagina = tamanioPagina,
-                TotalRegistros = totalRegistros,
-                TotalPaginas = (int)Math.Ceiling((double)totalRegistros / tamanioPagina)
-            };
-        }
-        public async Task<PedidoDto?> ObtenerPedidoPorIdAsync(int id)
-        {
-            var pedido = await _context.Pedidos
-                .Include(p => p.Cliente)
-                .Include(p => p.Detalles)
-                .ThenInclude(d => d.Producto)
-                .FirstOrDefaultAsync(p => p.Id == id);
-            if (pedido == null)
-            {
-                return null;
-            }
-            var pedidoDto = new PedidoDto
-            {
-                Id = pedido.Id,
-                ClienteId = pedido.ClienteId,
-                NombreCliente = $"{pedido.Cliente.Nombre} {pedido.Cliente.Apellido}",
-                Fecha = pedido.Fecha,
-                Estado = pedido.Estado.ToString(),
-                Total = pedido.Total,
-                Detalles = pedido.Detalles.Select(d => new DetallePedidoDto
-                {
-                    ProductoId = d.ProductoId,
-                    NombreProducto = d.Producto.Nombre,
-                    Cantidad = d.Cantidad,
-                    PrecioUnitario = d.PrecioUnitario,
-                    Subtotal = d.Cantidad * d.PrecioUnitario
-                }).ToList()
-            };
-            return pedidoDto;
-        }
-        public async Task<int> CrearPedidoAsync(
-    CrearPedidoDto crearPedidoDto
-)
-        {
-            await using var transaction =
-                await _context.Database.BeginTransactionAsync();
-
-            try
-            {
-                var cliente =
-                    await _context.Clientes
-                        .FirstOrDefaultAsync(
-                            c => c.Id ==
-                                 crearPedidoDto.ClienteId
-                        );
-
-                if (cliente == null)
-                {
-                    throw new NotFoundException(
-                        "El cliente no existe."
-                    );
-                }
-
-                var pedido = new Pedido
-                {
-                    ClienteId =
-                        crearPedidoDto.ClienteId,
-
-                    Fecha = DateTime.UtcNow,
-
-                    Estado =
-                        EstadoPedido.Pendiente,
-
-                    Total = 0,
-
-                    Detalles =
-                        new List<DetallePedido>()
-                };
-
-                // Guardamos temporalmente los productos
-                // que después necesitan descontar stock.
-                var productosPedido =
-                    new List<(
-                        Producto Producto,
-                        int Cantidad
-                    )>();
-
-                foreach (
-                    var detalleDto
-                    in crearPedidoDto.Detalles
-                )
-                {
-                    var producto =
-                        await _context.Productos
-                            .FirstOrDefaultAsync(
-                                p =>
-                                    p.Id ==
-                                    detalleDto.ProductoId
-                            );
-
-                    if (producto == null)
-                    {
-                        throw new NotFoundException(
-                            "El producto no existe."
-                        );
-                    }
-
-                    if (!producto.Activo)
-                    {
-                        throw new ReglaNegocioException(
-                            $"El producto {producto.Nombre} no está activo."
-                        );
-                    }
-
-                    if (detalleDto.Cantidad <= 0)
-                    {
-                        throw new ReglaNegocioException(
-                            "La cantidad debe ser mayor que cero."
-                        );
-                    }
-
-                    if (
-                        detalleDto.Cantidad >
-                        producto.Stock
-                    )
-                    {
-                        throw new ReglaNegocioException(
-                            $"Stock insuficiente para el producto {producto.Nombre}."
-                        );
-                    }
-
-                    var detalle =
-                        new DetallePedido
-                        {
-                            ProductoId =
-                                producto.Id,
-
-                            Cantidad =
-                                detalleDto.Cantidad,
-
-                            PrecioUnitario =
-                                producto.Precio
-                        };
-
-                    var subtotal =
-                        producto.Precio *
-                        detalleDto.Cantidad;
-
-                    pedido.Total += subtotal;
-
-                    pedido.Detalles.Add(
-                        detalle
-                    );
-
-                    productosPedido.Add(
-                        (
-                            producto,
-                            detalleDto.Cantidad
-                        )
-                    );
-                }
-
-                // Primer guardado:
-                // SQL Server genera pedido.Id.
-                await _context.Pedidos
-                    .AddAsync(pedido);
-
-                await _context.SaveChangesAsync();
-
-                // Ahora pedido.Id ya existe.
-                foreach (
-                    var item in productosPedido
-                )
-                {
-                    _stockService.RegistrarSalida(
-                        item.Producto,
-                        item.Cantidad,
-                        "Venta",
-                        pedido.Id
-                    );
-                }
-
-                // Guarda cambios de stock
-                // + MovimientoStock.
-                await _context.SaveChangesAsync();
-
-                await transaction.CommitAsync();
-
-                return pedido.Id;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-
-                throw;
-            }
-        }
-        public async Task ConfirmarPedidoAsync(int id)
-        {
-            var pedido = await _context.Pedidos
-                .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (pedido == null)
-            {
-                throw new NotFoundException(
-                    "El pedido no existe."
-                );
-            }
-
-            if (pedido.Estado != EstadoPedido.Pendiente)
-            {
-                throw new ReglaNegocioException(
-                    $"No se puede confirmar un pedido con estado {pedido.Estado}."
-                );
-            }
-
-            pedido.Estado = EstadoPedido.Confirmado;
-
-            await _context.SaveChangesAsync();
-        }
-        public async Task CancelarPedidoAsync(int id)
-        {
-            await using var transaction =
-                await _context.Database
-                    .BeginTransactionAsync();
-
-            try
-            {
-                var pedido =
-                    await _context.Pedidos
-
-                        .Include(
-                            p => p.Detalles
-                        )
-
-                        .ThenInclude(
-                            d => d.Producto
-                        )
-
-                        .FirstOrDefaultAsync(
-                            p => p.Id == id
-                        );
-
-                if (pedido == null)
-                {
-                    throw new NotFoundException(
-                        "El pedido no existe."
-                    );
-                }
-
-                if (
-                    pedido.Estado !=
-                        EstadoPedido.Pendiente
-                    &&
-                    pedido.Estado !=
-                        EstadoPedido.Confirmado
-                )
-                {
-                    throw new ReglaNegocioException(
-                        $"No se puede cancelar un pedido con estado {pedido.Estado}."
-                    );
-                }
-
-                pedido.Estado =
-                    EstadoPedido.Cancelado;
-
-                foreach (
-                    var detalle
-                    in pedido.Detalles
-                )
-                {
-                    if (detalle.Producto != null)
-                    {
-                        _stockService
-                            .RegistrarEntrada(
-                                detalle.Producto,
-                                detalle.Cantidad,
-                                "Cancelación de pedido",
-                                pedido.Id
-                            );
-                    }
-                }
-
-                await _context.SaveChangesAsync();
-
-                await transaction.CommitAsync();
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-
-                throw;
-            }
-        }
-        
-        public async Task EntregarPedidoAsync(int id)
-        {
-            var pedido = await _context.Pedidos
-                .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (pedido == null)
-            {
-                throw new NotFoundException("El pedido no existe.");
-            }
-
-            if (pedido.Estado != EstadoPedido.Confirmado)
-            {
-                throw new ReglaNegocioException(
-                    $"No se puede entregar un pedido con estado {pedido.Estado}."
-                );
-            }
-
-            pedido.Estado = EstadoPedido.Entregado;
-
-            await _context.SaveChangesAsync();
-        }
+        if (pagina <= 0 || tamanioPagina is < 1 or > 100 || (long)(pagina - 1) * tamanioPagina > int.MaxValue)
+            throw new ReglaNegocioException("La paginación está fuera de rango.");
+        if (estado.HasValue && !System.Enum.IsDefined(estado.Value) || clienteId is <= 0)
+            throw new ReglaNegocioException("El filtro no es válido.");
+        if (fechaDesde > fechaHasta || fechaHasta?.Date == DateTime.MaxValue.Date)
+            throw new ReglaNegocioException("El rango de fechas no es válido.");
+        var query = context.Pedidos.AsNoTracking().Include(p => p.Cliente).Include(p => p.Detalles).ThenInclude(d => d.Producto).AsQueryable();
+        if (estado.HasValue) query = query.Where(p => p.Estado == estado.Value);
+        if (clienteId.HasValue) query = query.Where(p => p.ClienteId == clienteId.Value);
+        if (fechaDesde.HasValue) query = query.Where(p => p.Fecha >= fechaDesde.Value.Date);
+        if (fechaHasta.HasValue) { var fin = fechaHasta.Value.Date.AddDays(1); query = query.Where(p => p.Fecha < fin); }
+        var count = await query.CountAsync();
+        var pedidos = await query.OrderByDescending(p => p.Fecha).ThenByDescending(p => p.Id).Skip((pagina - 1) * tamanioPagina).Take(tamanioPagina).ToListAsync();
+        return new ResultadoPaginado<PedidoDto> { Items = pedidos.Select(Map), Pagina = pagina, TamanioPagina = tamanioPagina, TotalRegistros = count, TotalPaginas = (int)Math.Ceiling((double)count / tamanioPagina) };
     }
+
+    public async Task<PedidoDto?> ObtenerPedidoPorIdAsync(int id)
+    {
+        var pedido = await context.Pedidos.AsNoTracking().Include(p => p.Cliente).Include(p => p.Detalles).ThenInclude(d => d.Producto).SingleOrDefaultAsync(p => p.Id == id);
+        return pedido is null ? null : Map(pedido);
+    }
+
+    public async Task<int> CrearPedidoAsync(CrearPedidoDto dto)
+    {
+        var detalles = PedidoRules.NormalizarDetalles(dto);
+        await using var tx = await context.Database.BeginTransactionAsync();
+        var cliente = await context.Clientes.SingleOrDefaultAsync(c => c.Id == dto.ClienteId)
+            ?? throw new NotFoundException("El cliente no existe.");
+        if (!cliente.Activo) throw new ReglaNegocioException("El cliente no está activo.");
+        var pedido = new Pedido { ClienteId = dto.ClienteId, Fecha = DateTime.UtcNow, Estado = EstadoPedido.Pendiente };
+        var productos = new List<(Producto Producto, int Cantidad)>();
+        foreach (var item in detalles)
+        {
+            var producto = await context.Productos.SingleOrDefaultAsync(p => p.Id == item.ProductoId)
+                ?? throw new NotFoundException("El producto no existe.");
+            if (!producto.Activo) throw new ReglaNegocioException("El producto no está activo.");
+            if (producto.Stock < item.Cantidad) throw new ConflictoException("Stock insuficiente para completar el pedido.");
+            pedido.Total += PedidoRules.Subtotal(producto.Precio, item.Cantidad);
+            if (pedido.Total > PedidoRules.ImporteMaximo) throw new ReglaNegocioException("El total del pedido excede el límite permitido.");
+            pedido.Detalles.Add(new DetallePedido { ProductoId = producto.Id, Cantidad = item.Cantidad, PrecioUnitario = producto.Precio });
+            productos.Add((producto, item.Cantidad));
+        }
+        context.Pedidos.Add(pedido);
+        await context.SaveChangesAsync();
+        foreach (var (producto, cantidad) in productos) stockService.RegistrarSalida(producto, cantidad, "Venta", pedido.Id);
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+        return pedido.Id;
+    }
+
+    public Task ConfirmarPedidoAsync(int id) => CambiarEstadoAsync(id, EstadoPedido.Confirmado);
+    public Task EntregarPedidoAsync(int id) => CambiarEstadoAsync(id, EstadoPedido.Entregado);
+    private async Task CambiarEstadoAsync(int id, EstadoPedido destino)
+    {
+        var pedido = await context.Pedidos.SingleOrDefaultAsync(p => p.Id == id) ?? throw new NotFoundException("El pedido no existe.");
+        PedidoRules.ValidarTransicion(pedido.Estado, destino);
+        pedido.Estado = destino;
+        await context.SaveChangesAsync();
+    }
+
+    public async Task CancelarPedidoAsync(int id)
+    {
+        await using var tx = await context.Database.BeginTransactionAsync();
+        var pedido = await context.Pedidos.Include(p => p.Detalles).ThenInclude(d => d.Producto).SingleOrDefaultAsync(p => p.Id == id)
+            ?? throw new NotFoundException("El pedido no existe.");
+        PedidoRules.ValidarTransicion(pedido.Estado, EstadoPedido.Cancelado);
+        pedido.Estado = EstadoPedido.Cancelado;
+        foreach (var detalle in pedido.Detalles.OrderBy(d => d.ProductoId))
+            stockService.RegistrarEntrada(detalle.Producto ?? throw new NotFoundException("El producto del pedido no existe."), detalle.Cantidad, "Cancelación de pedido", pedido.Id);
+        await context.SaveChangesAsync();
+        await tx.CommitAsync();
+    }
+
+    private static PedidoDto Map(Pedido p) => new()
+    {
+        Id = p.Id, ClienteId = p.ClienteId, NombreCliente = $"{p.Cliente?.Nombre} {p.Cliente?.Apellido}".Trim(), Fecha = p.Fecha, Estado = p.Estado.ToString(), Total = p.Total,
+        Detalles = p.Detalles.Select(d => new DetallePedidoDto { ProductoId = d.ProductoId, NombreProducto = d.Producto?.Nombre ?? string.Empty, Cantidad = d.Cantidad, PrecioUnitario = d.PrecioUnitario, Subtotal = d.Cantidad * d.PrecioUnitario }).ToList()
+    };
 }

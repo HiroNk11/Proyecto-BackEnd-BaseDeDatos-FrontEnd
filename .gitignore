@@ -8,3 +8,9 @@ obj/
 node_modules/
 dist/
 .env
+
+**/appsettings.*.local.json
+**/conexion.txt
+TestResults/
+*.trx
+*.tsbuildinfo

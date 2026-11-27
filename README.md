@@ -26,6 +26,10 @@ Capturas de la demo pública con datos ficticios; sin operaciones reales.
 
 ## Descripción
 
+### Calidad y seguridad · Etapa 1
+
+La API requiere JWT y aplica roles y propiedad de pedidos. Se mantienen rutas y respuestas de éxito; los errores usan ProblemDetails con `mensaje` para compatibilidad. Antes de iniciar, seguir [configuración OIDC/JWT local, contratos y pruebas](SECURITY-ETAPA1.md). Web y Mobile incluyen un adaptador para obtener el access token de la sesión; todavía no se integró un proveedor de login. La demo pública estática es independiente y no cambia.
+
 ComercioPedidos es un sistema de gestión de retail para un emprendimiento de indumentaria. Centraliza la administración de productos, clientes, pedidos y movimientos de stock para facilitar el seguimiento de la operación comercial.
 
 La solución integra una aplicación web desarrollada en React y una aplicación móvil construida con React Native y Expo. Ambas consumen la misma API REST en ASP.NET Core, que concentra las reglas de negocio y el acceso a los datos mediante Entity Framework Core y SQL Server.
@@ -140,6 +144,8 @@ dotnet ef database update --project ComercioPedidos/backend/ComercioPedidos.Infr
 ```
 
 ### 5. Iniciar la API
+
+Además de la conexión SQL, configurar Authority/Audience del proveedor o generar un JWT local con `dotnet user-jwts` según [la guía de seguridad](SECURITY-ETAPA1.md). Sin token válido los endpoints protegidos devuelven 401.
 
 Configurá el certificado HTTPS de desarrollo:
 

@@ -1,3 +1,4 @@
+import { authorizedFetch as fetch } from './authorizedFetch';
 import { API_URL } from "../config/api";
 import type { CrearPedido, PedidosPaginados } from "../models/Pedido";
 export async function obtenerPedidos(

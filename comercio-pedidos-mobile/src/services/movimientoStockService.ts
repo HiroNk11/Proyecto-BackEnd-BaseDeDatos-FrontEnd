@@ -1,3 +1,4 @@
+import { authorizedFetch as fetch } from './authorizedFetch';
 import type {
   MovimientosStockPaginados,
 } from "../models/MovimientoStock";
