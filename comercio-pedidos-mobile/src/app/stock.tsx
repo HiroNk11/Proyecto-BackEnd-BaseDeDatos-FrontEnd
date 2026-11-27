@@ -1,3 +1,4 @@
+import { movementLabel } from "../lib/lifecycle";
 import { errorMessage } from "../lib/problem";
 import { useEffect, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
@@ -182,14 +183,15 @@ export default function StockScreen() {
                   item.tipo === "Entrada" ? styles.entrada : styles.salida,
                 ]}
               >
-                {item.tipo}
+                {movementLabel(item.tipoMovimiento || item.tipo)}
               </Text>
             </View>
 
             <Text style={styles.nombre}>{item.nombreProducto}</Text>
 
             <Text style={styles.texto}>
-              {new Date(item.fecha).toLocaleDateString("es-AR")}
+              {new Date(item.fechaUtc || item.fecha).toLocaleString("es-AR")} ·{" "}
+              {item.usuarioId || "Responsable no registrado"}
             </Text>
 
             <Text style={styles.cantidad}>

@@ -30,17 +30,23 @@ export interface RegistrarMovimientoStock {
   productoId: number;
   cantidad: number;
   motivo: string;
+  version?: string;
 }
 
 export async function registrarMovimientoStock(
   tipo: TipoMovimientoManual,
   datos: RegistrarMovimientoStock,
 ): Promise<void> {
-  await fetch(`${API_URL}/movimientos-stock/${tipo.toLowerCase()}`, {
+  await fetch(`${API_URL}/productos/${datos.productoId}/ajustes-stock`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(datos),
+    body: JSON.stringify({
+      tipoMovimiento: tipo === "Entrada" ? "Ingreso" : "AjusteManual",
+      cantidad: tipo === "Entrada" ? datos.cantidad : -datos.cantidad,
+      motivo: datos.motivo,
+      version: datos.version,
+    }),
   });
 }

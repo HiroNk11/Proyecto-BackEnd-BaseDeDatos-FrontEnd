@@ -9,7 +9,7 @@ using ComercioPedidos.Application.Rules;
 
 namespace ComercioPedidos.Infrastructure.Services;
 
-public sealed class PedidoService(ComercioPedidosDbContext context, IStockService stockService) : IPedidoService
+public sealed class PedidoService(ComercioPedidosDbContext context, IStockService stockService, ICurrentUser user) : IPedidoService
 {
     public async Task<ResultadoPaginado<PedidoDto>> ObtenerPedidosAsync(EstadoPedido? estado, int? clienteId, DateTime? fechaDesde, DateTime? fechaHasta, int pagina = 1, int tamanioPagina = 10)
     {
@@ -31,7 +31,7 @@ public sealed class PedidoService(ComercioPedidosDbContext context, IStockServic
 
     public async Task<PedidoDto?> ObtenerPedidoPorIdAsync(int id)
     {
-        var pedido = await context.Pedidos.AsNoTracking().Include(p => p.Cliente).Include(p => p.Detalles).ThenInclude(d => d.Producto).SingleOrDefaultAsync(p => p.Id == id);
+        var pedido = await context.Pedidos.AsNoTracking().Include(p => p.Historial).Include(p => p.Cliente).Include(p => p.Detalles).ThenInclude(d => d.Producto).SingleOrDefaultAsync(p => p.Id == id);
         return pedido is null ? null : Map(pedido);
     }
 
@@ -55,6 +55,7 @@ public sealed class PedidoService(ComercioPedidosDbContext context, IStockServic
             pedido.Detalles.Add(new DetallePedido { ProductoId = producto.Id, Cantidad = item.Cantidad, PrecioUnitario = producto.Precio });
             productos.Add((producto, item.Cantidad));
         }
+        pedido.Historial.Add(new() { EstadoNuevo = EstadoPedido.Pendiente, FechaUtc = DateTime.UtcNow, UsuarioId = user.Id });
         context.Pedidos.Add(pedido);
         await context.SaveChangesAsync();
         foreach (var (producto, cantidad) in productos) stockService.RegistrarSalida(producto, cantidad, "Venta", pedido.Id);
@@ -63,13 +64,15 @@ public sealed class PedidoService(ComercioPedidosDbContext context, IStockServic
         return pedido.Id;
     }
 
+    public Task PrepararPedidoAsync(int id) => CambiarEstadoAsync(id, EstadoPedido.EnPreparacion);
+    public Task EnviarPedidoAsync(int id) => CambiarEstadoAsync(id, EstadoPedido.Enviado);
     public Task ConfirmarPedidoAsync(int id) => CambiarEstadoAsync(id, EstadoPedido.Confirmado);
     public Task EntregarPedidoAsync(int id) => CambiarEstadoAsync(id, EstadoPedido.Entregado);
     private async Task CambiarEstadoAsync(int id, EstadoPedido destino)
     {
         var pedido = await context.Pedidos.SingleOrDefaultAsync(p => p.Id == id) ?? throw new NotFoundException("El pedido no existe.");
         PedidoRules.ValidarTransicion(pedido.Estado, destino);
-        pedido.Estado = destino;
+        RegistrarEstado(pedido, destino);
         await context.SaveChangesAsync();
     }
 
@@ -79,16 +82,22 @@ public sealed class PedidoService(ComercioPedidosDbContext context, IStockServic
         var pedido = await context.Pedidos.Include(p => p.Detalles).ThenInclude(d => d.Producto).SingleOrDefaultAsync(p => p.Id == id)
             ?? throw new NotFoundException("El pedido no existe.");
         PedidoRules.ValidarTransicion(pedido.Estado, EstadoPedido.Cancelado);
-        pedido.Estado = EstadoPedido.Cancelado;
+        RegistrarEstado(pedido, EstadoPedido.Cancelado);
         foreach (var detalle in pedido.Detalles.OrderBy(d => d.ProductoId))
             stockService.RegistrarEntrada(detalle.Producto ?? throw new NotFoundException("El producto del pedido no existe."), detalle.Cantidad, "Cancelación de pedido", pedido.Id);
         await context.SaveChangesAsync();
         await tx.CommitAsync();
     }
 
+    private void RegistrarEstado(Pedido pedido, EstadoPedido destino)
+    {
+        pedido.Historial.Add(new() { EstadoAnterior = pedido.Estado, EstadoNuevo = destino, FechaUtc = DateTime.UtcNow, UsuarioId = user.Id });
+        pedido.Estado = destino;
+    }
     private static PedidoDto Map(Pedido p) => new()
     {
         Id = p.Id, ClienteId = p.ClienteId, NombreCliente = $"{p.Cliente?.Nombre} {p.Cliente?.Apellido}".Trim(), Fecha = p.Fecha, Estado = p.Estado.ToString(), Total = p.Total,
+        Historial = p.Historial.OrderBy(h => h.FechaUtc).ThenBy(h => h.Id).Select(h => new HistorialEstadoPedidoDto { Id=h.Id, EstadoAnterior=h.EstadoAnterior?.ToString(), EstadoNuevo=h.EstadoNuevo.ToString(), FechaUtc=DateTime.SpecifyKind(h.FechaUtc, DateTimeKind.Utc), UsuarioId=h.UsuarioId }).ToList(),
         Detalles = p.Detalles.Select(d => new DetallePedidoDto { ProductoId = d.ProductoId, NombreProducto = d.Producto?.Nombre ?? string.Empty, Cantidad = d.Cantidad, PrecioUnitario = d.PrecioUnitario, Subtotal = d.Cantidad * d.PrecioUnitario }).ToList()
     };
 }

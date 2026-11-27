@@ -1,35 +1,36 @@
 import axios, { API_BASE_URL } from "./http"; // importa la biblioteca axios para realizar solicitudes HTTP
-import type { Producto, CrearProducto } from "../models/Producto"; // importa la interfaz Producto desde el archivo models/Producto.ts 
+import type { Producto, CrearProducto } from "../models/Producto"; // importa la interfaz Producto desde el archivo models/Producto.ts
 
-const API_URL = API_BASE_URL + '/Productos'; // Define la URL base de la API para obtener los productos
+const API_URL = API_BASE_URL + "/Productos"; // Define la URL base de la API para obtener los productos
 
 //  Define una función asíncrona llamada obtenerProductos que devuelve una promesa que resuelve un arreglo de objetos Producto
-export const obtenerProductos = async (): Promise<Producto[]> => { // Define una función asíncrona llamada obtenerProductos que devuelve una promesa que resuelve un arreglo de objetos Producto
-    
-    const respuesta = await axios.get<Producto[]>(API_URL); // Realiza una solicitud GET a la URL de la API y espera la respuesta, especificando que se espera un arreglo de objetos Producto como respuesta
-    return respuesta.data; // Devuelve los datos de la respuesta, que es un arreglo de objetos Producto
+export const obtenerProductos = async (): Promise<Producto[]> => {
+  // Define una función asíncrona llamada obtenerProductos que devuelve una promesa que resuelve un arreglo de objetos Producto
+
+  const respuesta = await axios.get<Producto[]>(API_URL); // Realiza una solicitud GET a la URL de la API y espera la respuesta, especificando que se espera un arreglo de objetos Producto como respuesta
+  return respuesta.data; // Devuelve los datos de la respuesta, que es un arreglo de objetos Producto
 };
 
 // Define una función asíncrona llamada crearProducto que recibe un objeto de tipo CrearProducto y devuelve una promesa que resuelve un objeto Producto
 export const crearProducto = async (
-    producto: CrearProducto
+  producto: CrearProducto,
 ): Promise<Producto> => {
+  const respuesta = await axios.post<Producto>(API_URL, producto);
 
-    const respuesta = await axios.post<Producto>(
-        API_URL,
-        producto
-    );
-
-    return respuesta.data;
+  return respuesta.data;
 };
 
 export const eliminarProducto = async (id: number): Promise<void> => {
-    await axios.delete(`${API_URL}/${id}`);
+  await axios.delete(`${API_URL}/${id}`);
 };
 
 export const actualizarProducto = async (
-    id: number,
-    producto: CrearProducto
+  id: number,
+  producto: CrearProducto,
 ): Promise<void> => {
-    await axios.put(`${API_URL}/${id}`, producto);
+  await axios.put(`${API_URL}/${id}`, producto);
 };
+export const obtenerProducto = async (id: number): Promise<Producto> =>
+  (await axios.get<Producto>(`${API_URL}/${id}`)).data;
+export const obtenerStockBajo = async (): Promise<Producto[]> =>
+  (await axios.get<Producto[]>(`${API_URL}/stock-bajo`)).data;

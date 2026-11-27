@@ -528,3 +528,53 @@ textarea:focus-visible {
     animation: none;
   }
 }
+
+.status-shipped {
+  background: #dff2f4;
+  color: #236773;
+}
+.order-timeline,
+.inventory-history {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+  margin: 18px 0;
+}
+.order-timeline li,
+.inventory-history li {
+  border-left: 3px solid #b8d3df;
+  background: #f3f7fa;
+  padding: 14px 18px;
+  border-radius: 0 8px 8px 0;
+  overflow-wrap: anywhere;
+}
+.order-timeline p,
+.inventory-history p {
+  margin: 10px 0;
+  color: #405c6d;
+}
+.inventory-adjustment {
+  padding: 18px 0;
+}
+.inventory-adjustment fieldset {
+  display: grid;
+  gap: 14px;
+}
+.inventory-success {
+  padding: 14px;
+  background: #e1f3e8;
+  color: #226445;
+}
+.inventory-adjustment fieldset {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.inventory-adjustment fieldset label:last-of-type,
+.inventory-adjustment fieldset button {
+  grid-column: 1 / -1;
+}
+@media (max-width: 600px) {
+  .inventory-adjustment fieldset {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

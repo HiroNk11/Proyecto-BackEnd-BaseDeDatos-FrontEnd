@@ -5,6 +5,10 @@ export interface MovimientoStock {
   fecha: string;
   tipo: string;
   cantidad: number;
+  tipoMovimiento?: string;
+  usuarioId?: string;
+  fechaUtc?: string;
+  stockNuevo?: number;
   stockAnterior: number;
   stockPosterior: number;
   motivo: string | null;

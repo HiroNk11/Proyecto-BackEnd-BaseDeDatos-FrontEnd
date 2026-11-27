@@ -1,9 +1,9 @@
+import { movementLabel } from "../lib/lifecycle";
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   obtenerMovimientosStock,
-  registrarEntradaStock,
-  registrarSalidaStock,
+  ajustarStock,
 } from "../services/movimientoStockService";
 import { obtenerProductos } from "../services/productoService";
 import { useResource } from "../hooks/useResource";
@@ -55,19 +55,24 @@ export default function MovimientosStock() {
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!type || lock.current) return;
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0 ||
+      reason.trim().length < 3
+    ) {
+      setError("Ingresá cantidad válida y motivo de al menos 3 caracteres.");
+      return;
+    }
     lock.current = true;
     setBusy(true);
     setError("");
     try {
-      await (type === "Entrada" ? registrarEntradaStock : registrarSalidaStock)(
-        {
-          productoId: Number(product),
-          cantidad: quantity,
-          motivo:
-            reason.trim() ||
-            (type === "Entrada" ? "Reposición manual" : "Salida manual"),
-        },
-      );
+      await ajustarStock(Number(product), {
+        tipoMovimiento: type === "Entrada" ? "Ingreso" : "AjusteManual",
+        cantidad: type === "Entrada" ? quantity : -quantity,
+        motivo: reason.trim(),
+        version: products.data?.find((p) => p.id === Number(product))?.version,
+      });
       setSuccess(`${type} registrada. Inventario actualizado.`);
       setType(null);
       movements.refresh();
@@ -161,19 +166,21 @@ export default function MovimientosStock() {
                 <th>Cantidad</th>
                 <th>Stock anterior</th>
                 <th>Stock posterior</th>
-                <th>Motivo</th>
+                <th>Motivo / responsable</th>
               </tr>
             </thead>
             <tbody>
               {movements.data.items.map((m) => (
                 <tr key={m.id}>
-                  <td>{new Date(m.fecha).toLocaleDateString("es-AR")}</td>
+                  <td>
+                    {new Date(m.fechaUtc || m.fecha).toLocaleString("es-AR")}
+                  </td>
                   <td>{m.nombreProducto}</td>
                   <td>
                     <span
                       className={`order-status ${m.tipo === "Entrada" ? "status-delivered" : "status-pending"}`}
                     >
-                      {m.tipo}
+                      {movementLabel(m.tipoMovimiento || m.tipo)}
                     </span>
                   </td>
                   <td>
@@ -184,7 +191,13 @@ export default function MovimientosStock() {
                   <td>
                     <strong>{m.stockPosterior}</strong>
                   </td>
-                  <td>{m.motivo || "—"}</td>
+                  <td>
+                    {m.motivo || "—"}
+                    <span className="cell-secondary">
+                      {m.usuarioId || "Responsable no registrado"}
+                      {m.pedidoId ? ` · Pedido #${m.pedidoId}` : ""}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -258,6 +271,8 @@ export default function MovimientosStock() {
                 Motivo
                 <input
                   value={reason}
+                  required
+                  minLength={3}
                   maxLength={250}
                   disabled={busy}
                   onChange={(e) => setReason(e.target.value)}

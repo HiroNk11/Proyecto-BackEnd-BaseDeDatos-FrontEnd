@@ -10,9 +10,10 @@ public class ProductoService : IProductoService
 {
     private readonly ComercioPedidosDbContext _context;
 
-    public ProductoService(ComercioPedidosDbContext context)
+    private readonly IStockService _stock;
+    public ProductoService(ComercioPedidosDbContext context, IStockService stock)
     {
-        _context = context;
+        _context = context; _stock = stock;
     }
     public async Task<IEnumerable<Producto>> GetProductos()
     {
@@ -29,10 +30,12 @@ public class ProductoService : IProductoService
             Nombre = productoDto.Nombre,
             Descripcion = productoDto.Descripcion,
             Precio = productoDto.Precio,
-            Stock = productoDto.Stock,
+            Stock = 0,
+            StockMinimo = productoDto.StockMinimo,
             Activo = productoDto.Activo
         };
         _context.Productos.Add(producto);
+        if (productoDto.Stock > 0) _stock.RegistrarEntrada(producto, productoDto.Stock, productoDto.MotivoStock ?? "Stock inicial del producto");
         await _context.SaveChangesAsync();
         return producto;
     }
@@ -45,10 +48,14 @@ public class ProductoService : IProductoService
             return null;
         }
 
+        if (productoDto.Version.HasValue && producto.Version != productoDto.Version) throw new ComercioPedidos.Application.Exceptions.ConflictoException("El producto cambió. Actualizá antes de guardar.");
         producto.Nombre = productoDto.Nombre;
         producto.Descripcion = productoDto.Descripcion;
         producto.Activo = productoDto.Activo;
-        producto.Stock = productoDto.Stock;
+        var delta = (long)productoDto.Stock - producto.Stock;
+        if (delta > 0) _stock.RegistrarEntrada(producto, (int)delta, productoDto.MotivoStock ?? "Actualización de producto (compatibilidad)");
+        if (delta < 0) _stock.RegistrarSalida(producto, (int)-delta, productoDto.MotivoStock ?? "Actualización de producto (compatibilidad)");
+        if (productoDto.StockMinimo.HasValue) producto.StockMinimo = productoDto.StockMinimo.Value;
         producto.Precio = productoDto.Precio;
 
         await _context.SaveChangesAsync();

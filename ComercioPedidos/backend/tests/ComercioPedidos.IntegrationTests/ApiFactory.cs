@@ -41,7 +41,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         if (role is not null) client.DefaultRequestHeaders.Add("X-Test-Role", role);
         if (clienteId is not null) client.DefaultRequestHeaders.Add("X-Test-Cliente", clienteId);
         using var scope = Services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<ComercioPedidosDbContext>().Database.EnsureCreated();
+        var db = scope.ServiceProvider.GetRequiredService<ComercioPedidosDbContext>();
+        if (string.IsNullOrWhiteSpace(sqlServer)) db.Database.EnsureCreated(); else db.Database.Migrate();
         return client;
     }
     protected override void Dispose(bool disposing)

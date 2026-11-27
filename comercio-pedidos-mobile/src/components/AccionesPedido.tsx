@@ -1,3 +1,4 @@
+import { orderActions } from "../lib/lifecycle";
 import { errorMessage } from "../lib/problem";
 import { useRef, useState } from "react";
 import {
@@ -21,6 +22,8 @@ interface Props {
 
 const etiquetas: Record<AccionPedido, string> = {
   confirmar: "Confirmar",
+  preparar: "Iniciar preparación",
+  enviar: "Marcar como enviado",
   entregar: "Entregar",
   cancelar: "Cancelar pedido",
 };
@@ -37,12 +40,7 @@ export default function AccionesPedido({
   const [error, setError] = useState("");
   const enviando = useRef(false);
 
-  const acciones: AccionPedido[] =
-    estado === "Pendiente"
-      ? ["confirmar", "cancelar"]
-      : estado === "Confirmado"
-        ? ["entregar", "cancelar"]
-        : [];
+  const acciones = orderActions(estado);
 
   const ejecutar = async () => {
     if (!accion || enviando.current || deshabilitado) return;

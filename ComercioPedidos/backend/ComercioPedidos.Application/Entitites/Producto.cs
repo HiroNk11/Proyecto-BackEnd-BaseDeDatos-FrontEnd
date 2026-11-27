@@ -16,9 +16,12 @@ namespace ComercioPedidos.Application.Entitites
         public decimal Precio { get; set; }
 
         public int Stock { get; set; }
+        public int StockMinimo { get; set; }
+        public Guid Version { get; set; }
 
         public bool Activo { get; set; }
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<MovimientoStock> MovimientosStock { get; set; }
     = new List<MovimientoStock>();
     }

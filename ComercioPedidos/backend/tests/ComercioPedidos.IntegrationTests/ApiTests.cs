@@ -59,12 +59,12 @@ public sealed class ApiTests
         var order = await client.GetFromJsonAsync<PedidoDto>($"/api/Pedidos/{id}"); Assert.Equal(20.50m, order!.Total); Assert.Equal("Pendiente", order.Estado);
         Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsync($"/api/Pedidos/{id}/confirmar", null)).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsync($"/api/Pedidos/{id}/cancelar", null)).StatusCode);
-        await Problem(await client.PutAsync($"/api/Pedidos/{id}/cancelar", null), 409);
+        await Problem(await client.PutAsync($"/api/Pedidos/{id}/cancelar", null), 422);
         var current = await client.GetFromJsonAsync<JsonElement>($"/api/Productos/{product}"); Assert.Equal(5, current.GetProperty("stock").GetInt32());
         var other = await Order(client, customer, product, 1); var next = await other.Content.ReadFromJsonAsync<int>();
         await client.PutAsync($"/api/Pedidos/{next}/confirmar", null);
         Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsync($"/api/Pedidos/{next}/entregar", null)).StatusCode);
-        await Problem(await client.PutAsync($"/api/Pedidos/{next}/cancelar", null), 409);
+        await Problem(await client.PutAsync($"/api/Pedidos/{next}/cancelar", null), 422);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public sealed class ApiTests
         using var factory = new ApiFactory(); using var client = factory.Client(); var customer = await CreateClient(client); var product = await CreateProduct(client, 1);
         await Problem(await Order(client, customer, product, 2), 409);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<ComercioPedidosDbContext>();
-        Assert.Empty(await db.Pedidos.ToListAsync()); Assert.Empty(await db.MovimientosStock.ToListAsync()); Assert.Equal(1, (await db.Productos.SingleAsync()).Stock);
+        Assert.Empty(await db.Pedidos.ToListAsync()); Assert.Single(await db.MovimientosStock.ToListAsync()); Assert.Equal(1, (await db.Productos.SingleAsync()).Stock);
     }
 
     [Theory]

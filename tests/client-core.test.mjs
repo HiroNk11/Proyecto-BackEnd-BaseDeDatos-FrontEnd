@@ -21,6 +21,31 @@ async function load(client, file) {
 for (const client of ["ComercioPedidos/frontend", "comercio-pedidos-mobile"]) {
   const problem = await load(client, "problem");
   const session = await load(client, "session");
+  const lifecycle = await load(client, "lifecycle");
+  test(`${client}: lifecycle exposes preparation and shipping without skipping stages`, () => {
+    assert.deepEqual(lifecycle.orderActions("Confirmado"), [
+      "preparar",
+      "cancelar",
+    ]);
+    assert.deepEqual(lifecycle.orderActions("EnPreparacion"), [
+      "enviar",
+      "cancelar",
+    ]);
+    assert.deepEqual(lifecycle.orderActions("Enviado"), [
+      "entregar",
+      "cancelar",
+    ]);
+    assert.deepEqual(lifecycle.orderActions("Entregado"), []);
+    assert.deepEqual(lifecycle.orderActions("Cancelado"), []);
+    assert.deepEqual(lifecycle.orderActions("unknown"), []);
+    assert.equal(lifecycle.stateLabel("EnPreparacion"), "En preparación");
+  });
+  test(`${client}: availability uses configurable inclusive minimum instead of fixed five`, () => {
+    assert.equal(lifecycle.availability(0, 3), "Sin stock");
+    assert.equal(lifecycle.availability(3, 3), "Últimas unidades");
+    assert.equal(lifecycle.availability(4, 3), "Disponible");
+    assert.equal(lifecycle.availability(9, 10), "Últimas unidades");
+  });
   test(`${client}: ProblemDetails preserves validation fields and uses actual HTTP status`, () => {
     const error = problem.parseProblem(400, {
       status: 200,

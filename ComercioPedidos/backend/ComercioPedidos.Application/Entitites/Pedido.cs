@@ -9,6 +9,8 @@ namespace ComercioPedidos.Application.Entitites
         public DateTime Fecha { get; set; }
         public EstadoPedido Estado { get; set; }
         public decimal Total { get; set; }
+        public Guid Version { get; set; }
+        public ICollection<HistorialEstadoPedido> Historial { get; set; } = new List<HistorialEstadoPedido>();
         public Cliente? Cliente { get; set; }// Propiedad de navegación hacia el cliente que realizó el pedido
         public ICollection<DetallePedido> Detalles { get; set; }= new List<DetallePedido>(); // Propiedad de navegación hacia los detalles del pedido
     }

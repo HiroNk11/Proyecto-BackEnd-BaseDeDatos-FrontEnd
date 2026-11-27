@@ -18,10 +18,35 @@ namespace ComercioPedidos.Infrastructure.Data
         public DbSet<DetallePedido> DetallesPedidos { get; set; } // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos DetallePedido, que estará relacionada con una tabla de detalles de pedidos."
         public DbSet<MovimientoStock> MovimientosStock { get; set; }  // Le estamos diciendo a Entity Framework: "Quiero trabajar con una colección de objetos MovimientoStock, que estará relacionada con una tabla de movimientos de stock."
 
+        public DbSet<HistorialEstadoPedido> HistorialEstadosPedidos { get; set; }
         public DbSet<Proveedor> Proveedores { get; set; } // 
+        private void PrepareVersions()
+        {
+            ChangeTracker.DetectChanges();
+            foreach (var entry in ChangeTracker.Entries<Producto>().Where(e => e.State is EntityState.Added or EntityState.Modified)) entry.Entity.Version = Guid.NewGuid();
+            foreach (var entry in ChangeTracker.Entries<Pedido>().Where(e => e.State is EntityState.Added or EntityState.Modified)) entry.Entity.Version = Guid.NewGuid();
+            if (ChangeTracker.Entries().Any(e => (e.Entity is MovimientoStock or HistorialEstadoPedido) && e.State is EntityState.Modified or EntityState.Deleted))
+                throw new ComercioPedidos.Application.Exceptions.ReglaNegocioException("El historial de auditoría es de solo anexado.");
+        }
+        public override int SaveChanges(bool acceptAllChangesOnSuccess) { PrepareVersions(); return base.SaveChanges(acceptAllChangesOnSuccess); }
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        { PrepareVersions(); return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken); }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Producto>().Property(p => p.Stock).IsConcurrencyToken();
+            modelBuilder.Entity<Producto>().Property(p => p.Version).IsConcurrencyToken();
+            modelBuilder.Entity<Pedido>().Property(p => p.Version).IsConcurrencyToken();
+            modelBuilder.Entity<MovimientoStock>().Property(m => m.TipoMovimiento).HasConversion<string>().HasMaxLength(40);
+            modelBuilder.Entity<MovimientoStock>().Property(m => m.UsuarioId).HasMaxLength(200);
+            modelBuilder.Entity<MovimientoStock>().HasIndex(m => new { m.ProductoId, m.Fecha, m.Id });
+            modelBuilder.Entity<HistorialEstadoPedido>(entity =>
+            {
+                entity.Property(h => h.EstadoAnterior).HasConversion<string>().HasMaxLength(30);
+                entity.Property(h => h.EstadoNuevo).HasConversion<string>().HasMaxLength(30);
+                entity.Property(h => h.UsuarioId).HasMaxLength(200);
+                entity.HasOne(h => h.Pedido).WithMany(p => p.Historial).HasForeignKey(h => h.PedidoId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(h => new { h.PedidoId, h.FechaUtc, h.Id });
+            });
             modelBuilder.Entity<Pedido>().Property(p => p.Estado).IsConcurrencyToken();
             modelBuilder.Entity<Producto>(entity =>
             {

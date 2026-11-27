@@ -16,6 +16,8 @@ namespace ComercioPedidos.Application.Services
         Task<PedidoDto?> ObtenerPedidoPorIdAsync(int id);
         Task CancelarPedidoAsync(int id);
         Task ConfirmarPedidoAsync(int id);
+        Task PrepararPedidoAsync(int id);
+        Task EnviarPedidoAsync(int id);
         Task EntregarPedidoAsync(int id);
     }
 }

@@ -10,6 +10,7 @@ namespace ComercioPedidos.Application.DTO
         public DateTime Fecha { get; set; }
         public string Estado { get; set; } = string.Empty;
         public decimal Total { get; set; }
+        public List<HistorialEstadoPedidoDto> Historial { get; set; } = [];
         public List<DetallePedidoDto> Detalles { get; set; } = new List<DetallePedidoDto>();
     }
 }

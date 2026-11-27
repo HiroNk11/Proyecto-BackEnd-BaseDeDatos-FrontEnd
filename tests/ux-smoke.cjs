@@ -17,6 +17,8 @@ function fixtures() {
         descripcion: "Producto de prueba",
         precio: 18500,
         stock: 8,
+        stockMinimo: 2,
+        version: "00000000-0000-0000-0000-000000000001",
         activo: true,
       },
       {
@@ -25,6 +27,8 @@ function fixtures() {
         descripcion: "Producto de prueba",
         precio: 35000,
         stock: 3,
+        stockMinimo: 3,
+        version: "00000000-0000-0000-0000-000000000002",
         activo: true,
       },
     ],
@@ -44,6 +48,15 @@ function fixtures() {
         nombreCliente: "Cliente Demo",
         fecha: "2026-11-27T12:00:00Z",
         estado: "Pendiente",
+        historial: [
+          {
+            id: 1,
+            estadoAnterior: null,
+            estadoNuevo: "Pendiente",
+            fechaUtc: "2026-11-27T12:00:00Z",
+            usuarioId: "operador-demo",
+          },
+        ],
         total: 18500,
         detalles: [
           {
@@ -56,6 +69,9 @@ function fixtures() {
         ],
       },
     ],
+    adjusts: 0,
+    movements: [],
+    failAdjust: false,
     creates: 0,
     changes: 0,
     failCreate: false,
@@ -92,13 +108,61 @@ async function mock(page, state) {
       return send(403, { title: "Forbidden", status: 403 });
     if (resource.endsWith("/clientes")) return send(200, state.clients);
     if (resource.endsWith("/productos")) return send(200, state.products);
-    if (resource.includes("movimientos-stock"))
-      return send(200, {
-        items: [],
-        pagina: 1,
-        totalPaginas: 0,
-        totalRegistros: 0,
+
+    if (resource.endsWith("/stock-bajo"))
+      return send(
+        200,
+        state.products.filter((p) => p.activo && p.stock <= p.stockMinimo),
+      );
+    if (method === "POST" && resource.endsWith("/ajustes-stock")) {
+      state.adjusts++;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      if (state.failAdjust)
+        return send(409, {
+          status: 409,
+          detail: "El inventario cambió. Actualizá antes de ajustar.",
+        });
+      const id = Number(resource.split("/").at(-2));
+      const product = state.products.find((p) => p.id === id);
+      const body = request.postDataJSON();
+      const previous = product.stock;
+      product.stock += body.cantidad;
+      state.movements.unshift({
+        id: state.adjusts,
+        productoId: id,
+        nombreProducto: product.nombre,
+        tipo: body.cantidad > 0 ? "Entrada" : "Salida",
+        tipoMovimiento: body.tipoMovimiento,
+        cantidad: Math.abs(body.cantidad),
+        stockAnterior: previous,
+        stockPosterior: product.stock,
+        stockNuevo: product.stock,
+        motivo: body.motivo,
+        usuarioId: "operador-demo",
+        fecha: new Date().toISOString(),
+        fechaUtc: new Date().toISOString(),
+        pedidoId: null,
       });
+      return route.fulfill({ status: 204, headers });
+    }
+    if (resource.match(/\/productos\/\d+$/))
+      return send(
+        200,
+        state.products.find((p) => p.id === Number(resource.split("/").at(-1))),
+      );
+    if (resource.includes("movimientos-stock")) {
+      const all = resource.includes("/productos/")
+        ? state.movements.filter(
+            (m) => m.productoId === Number(resource.split("/").at(-2)),
+          )
+        : state.movements;
+      return send(200, {
+        items: all,
+        pagina: 1,
+        totalPaginas: all.length ? 1 : 0,
+        totalRegistros: all.length,
+      });
+    }
     if (method === "POST" && resource.endsWith("/pedidos")) {
       state.creates++;
       await new Promise((resolve) => setTimeout(resolve, 250));
@@ -115,6 +179,15 @@ async function mock(page, state) {
         nombreCliente: "Cliente Demo",
         fecha: new Date().toISOString(),
         estado: "Pendiente",
+        historial: [
+          {
+            id: 1,
+            estadoAnterior: null,
+            estadoNuevo: "Pendiente",
+            fechaUtc: "2026-11-27T12:00:00Z",
+            usuarioId: "operador-demo",
+          },
+        ],
         total: body.detalles.reduce(
           (sum, d) =>
             sum +
@@ -141,11 +214,22 @@ async function mock(page, state) {
       await new Promise((resolve) => setTimeout(resolve, 250));
       const id = Number(resource.split("/").at(-2));
       const order = state.orders.find((o) => o.id === id);
-      order.estado = resource.endsWith("cancelar")
-        ? "Cancelado"
-        : resource.endsWith("confirmar")
-          ? "Confirmado"
-          : "Entregado";
+      const previous = order.estado;
+      const action = resource.split("/").at(-1);
+      order.estado = {
+        cancelar: "Cancelado",
+        confirmar: "Confirmado",
+        preparar: "EnPreparacion",
+        enviar: "Enviado",
+        entregar: "Entregado",
+      }[action];
+      order.historial.push({
+        id: order.historial.length + 1,
+        estadoAnterior: previous,
+        estadoNuevo: order.estado,
+        fechaUtc: new Date().toISOString(),
+        usuarioId: "operador-demo",
+      });
       return route.fulfill({ status: 204, headers });
     }
     if (resource.match(/\/pedidos\/\d+$/))
@@ -170,6 +254,206 @@ async function mock(page, state) {
     return send(404, { status: 404, title: "Not found" });
   });
 }
+async function stage3(browser) {
+  const page = await browser.newPage({
+    viewport: { width: 1440, height: 1000 },
+  });
+  const state = fixtures();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (
+      message.type() === "error" &&
+      !message.text().startsWith("Failed to load resource:")
+    )
+      errors.push(message.text());
+  });
+  state.orders[0].estado = "Confirmado";
+  state.orders[0].historial.push({
+    id: 2,
+    estadoAnterior: "Pendiente",
+    estadoNuevo: "Confirmado",
+    fechaUtc: "2026-11-27T12:01:00Z",
+    usuarioId: "operador-demo",
+  });
+  await mock(page, state);
+  await page.goto("http://127.0.0.1:4175/pedidos");
+  await page
+    .getByText("Sesión requerida o expirada", { exact: true })
+    .waitFor();
+  await page.getByLabel("Access token").fill(token);
+  await page
+    .getByRole("button", { name: "Usar token y recargar datos" })
+    .click();
+  await page
+    .getByRole("button", { name: "Ver detalle", exact: true })
+    .first()
+    .click();
+  await page
+    .getByRole("button", { name: "Iniciar preparación", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Confirmar", exact: true }).dblclick();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal(state.changes, 1);
+  await page
+    .getByRole("button", { name: "Ver detalle", exact: true })
+    .first()
+    .click();
+  const timeline = page.getByRole("region", { name: "Historial de estados" });
+  await timeline.getByText("En preparación", { exact: true }).waitFor();
+  await timeline
+    .getByText("Responsable: operador-demo", { exact: true })
+    .first()
+    .waitFor();
+  await page.screenshot({
+    path: path.join(output, "web-etapa3-timeline.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Marcar como enviado", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Confirmar", exact: true }).click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  assert.equal(state.orders[0].estado, "Enviado");
+  await page.getByRole("link", { name: "Productos", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Inventario / historial", exact: true })
+    .first()
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Tipo de movimiento").selectOption("AjusteManual");
+  await dialog.getByLabel("Cantidad a sumar o restar").fill("-2");
+  await dialog
+    .getByRole("button", { name: "Registrar ajuste", exact: true })
+    .click();
+  assert.equal(state.adjusts, 0, "A reason must be mandatory");
+  await dialog
+    .getByLabel("Motivo obligatorio")
+    .fill("Control de unidades dañadas");
+  state.failAdjust = true;
+  await dialog
+    .getByRole("button", { name: "Registrar ajuste", exact: true })
+    .click();
+  await dialog
+    .getByRole("alert")
+    .filter({ hasText: "El inventario cambió" })
+    .waitFor();
+  assert.equal(state.products[0].stock, 8);
+  state.failAdjust = false;
+  await dialog
+    .getByRole("button", { name: "Actualizar datos", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Registrar ajuste", exact: true })
+    .dblclick();
+  await dialog
+    .getByText("Ajuste registrado con trazabilidad.", { exact: true })
+    .waitFor();
+  await dialog.getByText("Stock 8 → 6", { exact: true }).waitFor();
+  assert.equal(state.adjusts, 2, "Only one retry POST should execute");
+  await page.screenshot({
+    path: path.join(output, "web-etapa3-inventario.png"),
+    fullPage: true,
+  });
+  assert.deepEqual(errors, []);
+  await page.close();
+
+  const native = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+  const mobileState = fixtures();
+  mobileState.products.push({
+    id: 3,
+    nombre: "Producto agotado",
+    precio: 100,
+    stock: 0,
+    stockMinimo: 2,
+    activo: true,
+  });
+  mobileState.orders[0].estado = "EnPreparacion";
+  mobileState.orders[0].historial.push({
+    id: 2,
+    estadoAnterior: "Confirmado",
+    estadoNuevo: "EnPreparacion",
+    fechaUtc: "2026-11-27T12:01:00Z",
+    usuarioId: "operador-demo",
+  });
+  native.on("pageerror", (error) => errors.push(error.message));
+  native.on("console", (message) => {
+    if (
+      message.type() === "error" &&
+      !message.text().startsWith("Failed to load resource:")
+    )
+      errors.push(message.text());
+  });
+  await mock(native, mobileState);
+  await native.goto("http://localhost:8087");
+  await native
+    .getByText("Sesión requerida o expirada", { exact: true })
+    .waitFor();
+  await native.getByLabel("Access token").fill(token);
+  await native.getByRole("button", { name: "Usar token", exact: true }).click();
+  await native.getByText("Últimas unidades", { exact: true }).waitFor();
+  await native.getByText("Sin stock", { exact: true }).waitFor();
+  await native.getByRole("button", { name: "Armar pedido" }).click();
+  await native
+    .getByRole("button", { name: "Agregar Buzo oversize", exact: true })
+    .click();
+  await native.getByLabel("Cantidad de Buzo oversize").fill("99");
+  assert.equal(
+    await native.getByLabel("Cantidad de Buzo oversize").inputValue(),
+    "1",
+  );
+  await native.getByLabel("Cantidad de Buzo oversize").fill("3");
+  assert.equal(
+    await native
+      .getByRole("button", { name: "Agregar Buzo oversize", exact: true })
+      .isDisabled(),
+    true,
+  );
+  assert.equal(
+    await native
+      .getByRole("button", { name: "Agregar Producto agotado", exact: true })
+      .isDisabled(),
+    true,
+  );
+  await native
+    .getByRole("button", { name: "Cerrar pedido", exact: true })
+    .click();
+  await native.getByRole("tab", { name: "Pedidos", exact: true }).click();
+  await native
+    .getByRole("button", { name: "En preparación", exact: true })
+    .click();
+  await native
+    .getByRole("button", { name: "Ver pedido 10", exact: true })
+    .click();
+  await native
+    .getByRole("button", { name: "Actualizar seguimiento", exact: true })
+    .click();
+  await native.getByText("Historial de estados", { exact: true }).waitFor();
+  await native.screenshot({
+    path: path.join(output, "mobile-etapa3-seguimiento.png"),
+    fullPage: true,
+  });
+  await native
+    .getByRole("button", { name: "Marcar como enviado", exact: true })
+    .click();
+  await native
+    .getByRole("button", { name: "Sí, continuar", exact: true })
+    .dblclick();
+  await native
+    .getByRole("button", { name: "Ver pedido 10", exact: true })
+    .waitFor({ state: "hidden" });
+  assert.equal(mobileState.changes, 1);
+  assert.equal(mobileState.orders[0].estado, "Enviado");
+  assert.deepEqual(errors, []);
+  await native.close();
+  console.log(
+    "PASS Stage 3: preparation/shipping, timeline, audited adjustment, conflict recovery, availability and quantity limits on Expo.",
+  );
+}
 async function web(browser) {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
@@ -177,8 +461,12 @@ async function web(browser) {
   const state = fixtures();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("console", message => {
-    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:")) errors.push(message.text());
+  page.on("console", (message) => {
+    if (
+      message.type() === "error" &&
+      !message.text().startsWith("Failed to load resource:")
+    )
+      errors.push(message.text());
   });
   await mock(page, state);
   await page.goto("http://127.0.0.1:4175/pedidos");
@@ -285,8 +573,12 @@ async function mobile(browser) {
   const state = fixtures();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("console", message => {
-    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:")) errors.push(message.text());
+  page.on("console", (message) => {
+    if (
+      message.type() === "error" &&
+      !message.text().startsWith("Failed to load resource:")
+    )
+      errors.push(message.text());
   });
   await mock(page, state);
   await page.goto("http://localhost:8087");
@@ -347,9 +639,13 @@ async function mobile(browser) {
   // A retry recovers the denied resource; other tabs remained usable.
   const retry = page.getByRole("button", { name: "Reintentar", exact: true });
   if (await retry.count()) await retry.click();
-  await page.getByRole("button", { name: "Ver pedido 11", exact: true }).waitFor();
+  await page
+    .getByRole("button", { name: "Ver pedido 11", exact: true })
+    .waitFor();
   await page.getByRole("button", { name: "Entregados", exact: true }).click();
-  await page.getByText("Aún no tenés pedidos en esta vista", { exact: true }).waitFor();
+  await page
+    .getByText("Aún no tenés pedidos en esta vista", { exact: true })
+    .waitFor();
   assert.deepEqual(errors, []);
   await page.close();
   console.log(
@@ -361,6 +657,7 @@ async function mobile(browser) {
   try {
     await web(browser);
     await mobile(browser);
+    await stage3(browser);
   } finally {
     await browser.close();
   }
