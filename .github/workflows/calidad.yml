@@ -1,4 +1,4 @@
-name: Calidad Etapa 1
+name: Calidad API y clientes
 on:
   pull_request:
   push:
@@ -30,7 +30,8 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --ignore-scripts
-      - run: npx tsc --noEmit
+      - run: npm run typecheck
+      - run: npm run build
       - if: matrix.project == 'ComercioPedidos/frontend'
-        run: npm run build
+        run: npm test
       - run: npm run lint

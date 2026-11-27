@@ -7,12 +7,10 @@ function Header() {
       </div>
 
       <div className="header-user">
-        <div className="user-avatar">
-          CP
-        </div>
+        <div className="user-avatar">CP</div>
 
         <div>
-          <strong>Administrador</strong>
+          <strong>Sesión de trabajo</strong>
           <span>Sistema ComercioPedidos</span>
         </div>
       </div>

@@ -1,22 +1,20 @@
+import { errorMessage } from "../lib/problem";
 import { useEffect, useRef, useState } from "react";
 import {
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { Producto } from "../models/Producto";
-import type {
-    TipoMovimientoManual,
-} from "../services/movimientoStockService";
-import {
-    registrarMovimientoStock,
-} from "../services/movimientoStockService";
+import type { TipoMovimientoManual } from "../services/movimientoStockService";
+import { registrarMovimientoStock } from "../services/movimientoStockService";
 import { obtenerProductos } from "../services/productoService";
 
 interface Props {
@@ -48,9 +46,9 @@ export default function MovimientoStockModal({
       .then((datos) => {
         if (activo) setProductos(datos);
       })
-      .catch(() => {
+      .catch((failure: unknown) => {
         if (activo) {
-          setErrorProductos("No se pudieron cargar los productos.");
+          setErrorProductos(errorMessage(failure));
         }
       })
       .finally(() => {
@@ -100,11 +98,7 @@ export default function MovimientoStockModal({
           (tipo === "Entrada" ? "Reposición manual" : "Salida manual"),
       });
     } catch (error: unknown) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo registrar el movimiento."
-      );
+      setError(errorMessage(error, "No se pudo registrar el movimiento."));
 
       enviando.current = false;
       setGuardando(false);
@@ -117,11 +111,7 @@ export default function MovimientoStockModal({
   };
 
   return (
-    <Modal
-      visible
-      animationType="slide"
-      onRequestClose={cerrar}
-    >
+    <Modal visible animationType="slide" onRequestClose={cerrar}>
       <SafeAreaView style={styles.container}>
         <ScrollView
           contentContainerStyle={styles.contenido}
@@ -148,9 +138,7 @@ export default function MovimientoStockModal({
                   setRecarga((valor) => valor + 1);
                 }}
               >
-                <Text style={styles.botonTexto}>
-                  Reintentar carga
-                </Text>
+                <Text style={styles.botonTexto}>Reintentar carga</Text>
               </Pressable>
             </View>
           ) : (
@@ -245,10 +233,9 @@ export default function MovimientoStockModal({
                 styles.deshabilitado,
             ]}
           >
+            {guardando && <ActivityIndicator color="#fff" />}
             <Text style={styles.botonTexto}>
-              {guardando
-                ? "Registrando..."
-                : `Registrar ${tipo.toLowerCase()}`}
+              {guardando ? "Registrando..." : `Registrar ${tipo.toLowerCase()}`}
             </Text>
           </Pressable>
 
@@ -256,10 +243,7 @@ export default function MovimientoStockModal({
             accessibilityRole="button"
             disabled={guardando}
             onPress={cerrar}
-            style={[
-              styles.botonCancelar,
-              guardando && styles.deshabilitado,
-            ]}
+            style={[styles.botonCancelar, guardando && styles.deshabilitado]}
           >
             <Text style={styles.texto}>Cancelar</Text>
           </Pressable>
@@ -332,7 +316,7 @@ const styles = StyleSheet.create({
   boton: {
     padding: 16,
     borderRadius: 10,
-    backgroundColor: "#2563eb",
+    backgroundColor: "#175b72",
     alignItems: "center",
   },
   botonSalida: {

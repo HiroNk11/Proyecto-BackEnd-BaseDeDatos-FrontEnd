@@ -1,16 +1,46 @@
-import { API_URL } from '../config/api';
+import { API_URL } from "../config/api";
+import { parseProblem } from "../lib/problem";
+import {
+  getAccessToken,
+  getSessionSnapshot,
+  reportSession,
+} from "../lib/session";
+export { setAccessTokenProvider } from "../lib/session";
 
-type TokenProvider = () => string | null | Promise<string | null>;
-let tokenProvider: TokenProvider = () => null;
-
-/** Supply the access token from the identity client; no token is stored or logged. */
-export function setAccessTokenProvider(provider: TokenProvider): void { tokenProvider = provider; }
-
-export async function authorizedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+export async function authorizedFetch(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const revision = getSessionSnapshot().revision;
   const headers = new Headers(init.headers);
   if (url.startsWith(`${API_URL}/`)) {
-    const token = await tokenProvider();
-    if (token) headers.set('Authorization', `Bearer ${token}`);
+    const token = await getAccessToken();
+    if (token) headers.set("Authorization", `Bearer ${token}`);
   }
-  return fetch(url, { ...init, headers });
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (init.signal?.aborted) controller.abort();
+  init.signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(abort, 15000);
+  try {
+    const response = await fetch(url, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      reportSession(response.status, revision);
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+      throw parseProblem(response.status, body);
+    }
+    return response;
+  } finally {
+    clearTimeout(timer);
+    init.signal?.removeEventListener("abort", abort);
+  }
 }
