@@ -48,7 +48,8 @@ export async function crearPedido(datos: CrearPedido): Promise<number> {
   return pedidoId;
 }
 
-export type AccionPedido = "confirmar" | "entregar" | "cancelar";
+export type AccionPedido =
+  "confirmar" | "preparar" | "enviar" | "entregar" | "cancelar";
 
 export async function cambiarEstadoPedido(
   pedidoId: number,

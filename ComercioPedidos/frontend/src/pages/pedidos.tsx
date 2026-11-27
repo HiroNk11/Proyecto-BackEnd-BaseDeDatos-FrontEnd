@@ -6,6 +6,8 @@ import { obtenerProductos } from "../services/productoService";
 import {
   obtenerPedidos,
   confirmarPedido,
+  prepararPedido,
+  enviarPedido,
   cancelarPedido,
   entregarPedido,
   crearPedido,
@@ -16,16 +18,20 @@ import StatusBadge from "../components/ui/StatusBadge";
 import ResourceState from "../components/ui/ResourceState";
 import Modal from "../components/ui/Modal";
 import ConfirmModal from "../components/ui/ConfirmModal";
+import OrderTimeline from "../components/OrderTimeline";
+import { orderStates, stateLabel } from "../lib/lifecycle";
 import Toast from "../components/ui/Toast";
 
-const states = ["Pendiente", "Confirmado", "Entregado", "Cancelado"];
+const states = orderStates;
 const money = (value: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(
     value,
   );
-type Action = "confirmar" | "entregar" | "cancelar";
+type Action = "confirmar" | "preparar" | "enviar" | "entregar" | "cancelar";
 const actions: Record<Action, (id: number) => Promise<void>> = {
   confirmar: confirmarPedido,
+  preparar: prepararPedido,
+  enviar: enviarPedido,
   entregar: entregarPedido,
   cancelar: cancelarPedido,
 };
@@ -194,7 +200,9 @@ export default function Pedidos() {
           >
             <option value="">Todos los estados</option>
             {states.map((state) => (
-              <option key={state}>{state}</option>
+              <option key={state} value={state}>
+                {stateLabel(state)}
+              </option>
             ))}
           </select>
         </label>
@@ -361,6 +369,7 @@ export default function Pedidos() {
             </table>
           </div>
           <p className="order-total">Total {money(selected.total)}</p>
+          <OrderTimeline id={selected.id} />
           <div className="modal-actions">
             {selected.estado === "Pendiente" && (
               <button
@@ -378,13 +387,35 @@ export default function Pedidos() {
                 className="btn btn-primary"
                 disabled={processing}
                 onClick={() =>
+                  setIntent({ id: selected.id, action: "preparar" })
+                }
+              >
+                Iniciar preparación
+              </button>
+            )}
+            {selected.estado === "EnPreparacion" && (
+              <button
+                className="btn btn-primary"
+                disabled={processing}
+                onClick={() => setIntent({ id: selected.id, action: "enviar" })}
+              >
+                Marcar como enviado
+              </button>
+            )}
+            {selected.estado === "Enviado" && (
+              <button
+                className="btn btn-primary"
+                disabled={processing}
+                onClick={() =>
                   setIntent({ id: selected.id, action: "entregar" })
                 }
               >
                 Marcar como entregado
               </button>
             )}
-            {["Pendiente", "Confirmado"].includes(selected.estado) && (
+            {["Pendiente", "Confirmado", "EnPreparacion", "Enviado"].includes(
+              selected.estado,
+            ) && (
               <button
                 className="btn btn-danger"
                 disabled={processing}
@@ -400,7 +431,7 @@ export default function Pedidos() {
       )}
       {intent && (
         <ConfirmModal
-          titulo={`${intent.action === "cancelar" ? "Cancelar" : intent.action === "confirmar" ? "Confirmar" : "Entregar"} pedido #${intent.id}`}
+          titulo={`${intent.action === "cancelar" ? "Cancelar" : intent.action === "confirmar" ? "Confirmar" : intent.action === "preparar" ? "Preparar" : intent.action === "enviar" ? "Enviar" : "Entregar"} pedido #${intent.id}`}
           mensaje={
             intent.action === "cancelar"
               ? "Se devolverán las unidades al inventario. Esta operación no se puede deshacer."

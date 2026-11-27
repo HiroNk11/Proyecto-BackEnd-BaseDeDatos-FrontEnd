@@ -21,6 +21,10 @@ namespace ComercioPedidos.Application.DTO
 
         [Range(0, int.MaxValue, ErrorMessage = "stock don't be negative")] // Ensure that the stock is a positive value, no don't need required because int always have a value
         public int Stock { get; set; }
+        [Range(0, int.MaxValue, ErrorMessage = "El stock mínimo no puede ser negativo.")]
+        public int? StockMinimo { get; set; }
+        public Guid? Version { get; set; }
+        [StringLength(250)] public string? MotivoStock { get; set; }
         public bool Activo { get; set; }
     }
 }

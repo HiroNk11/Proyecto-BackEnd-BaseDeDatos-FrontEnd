@@ -1,3 +1,4 @@
+import { availability } from "../lib/lifecycle";
 import NuevoPedidoModal from "../components/NuevoPedidoModal";
 import ResourceState from "../components/ResourceState";
 import { errorMessage } from "../lib/problem";
@@ -55,7 +56,7 @@ export default function ProductosScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <FlatList
-        data={productos}
+        data={productos.filter((p) => p.activo)}
         refreshing={actualizando}
         onRefresh={actualizarProductos}
         keyExtractor={(producto) => producto.id.toString()}
@@ -131,16 +132,12 @@ export default function ProductosScreen() {
                   styles.estado,
                   item.stock === 0
                     ? styles.sinStock
-                    : item.stock <= 5
+                    : item.stock <= (item.stockMinimo ?? 0)
                       ? styles.stockBajo
                       : styles.disponible,
                 ]}
               >
-                {item.stock === 0
-                  ? "Sin stock"
-                  : item.stock <= 5
-                    ? "Stock bajo"
-                    : "Disponible"}
+                {availability(item.stock, item.stockMinimo ?? 0)}
               </Text>
             </View>
           </View>

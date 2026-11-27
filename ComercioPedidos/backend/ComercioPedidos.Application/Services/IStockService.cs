@@ -10,6 +10,8 @@ namespace ComercioPedidos.Application.Services
 {
     public interface IStockService
     {
+        Task AjustarAsync(int productoId, AjusteStockDto dto);
+        Task<List<Producto>> StockBajoAsync();
         void RegistrarSalida(
             Producto producto,
             int cantidad,

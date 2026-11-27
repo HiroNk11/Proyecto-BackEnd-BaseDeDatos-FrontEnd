@@ -273,3 +273,7 @@ Proyecto-BackEnd-BaseDeDatos-FrontEnd/
 │
 └── README.md
 ```
+
+## Ciclo de pedidos e inventario auditable (Etapa 3)
+
+Preparación y envío, trazabilidad de inventario con responsable y fecha UTC, historial de estados y mínimos de reposición configurables. Ver [migraciones, endpoints y validación](ETAPA3.md).

@@ -14,6 +14,7 @@ export interface Pedido {
   estado: string;
   total: number;
   detalles: DetallePedido[];
+  historial?: HistorialEstadoPedido[];
 }
 
 export interface PedidosPaginados {
@@ -32,4 +33,12 @@ export interface CrearDetallePedido {
 export interface CrearPedido {
   clienteId: number;
   detalles: CrearDetallePedido[];
+}
+
+export interface HistorialEstadoPedido {
+  id: number;
+  estadoAnterior: string | null;
+  estadoNuevo: string;
+  fechaUtc: string;
+  usuarioId: string;
 }

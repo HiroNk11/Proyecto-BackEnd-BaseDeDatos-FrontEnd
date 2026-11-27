@@ -15,9 +15,10 @@ namespace ComercioPedidos.API.Controllers
     {
         private readonly IProductoService _productoService;
 
-        public ProductosController(IProductoService productoService)
+        private readonly IStockService _stockService;
+        public ProductosController(IProductoService productoService, IStockService stockService)
         {
-            _productoService = productoService;
+            _productoService = productoService; _stockService = stockService;
         }
 
         [HttpGet]
@@ -27,6 +28,15 @@ namespace ComercioPedidos.API.Controllers
 
             return Ok(productos);
         }
+        [Authorize(Policy = Policies.Staff)]
+        [HttpGet("stock-bajo")]
+        public async Task<IActionResult> StockBajo() => Ok(await _stockService.StockBajoAsync());
+        [Authorize(Policy = Policies.Staff)]
+        [HttpPost("{id}/ajustes-stock")]
+        public async Task<IActionResult> AjustarStock(int id, AjusteStockDto dto) { await _stockService.AjustarAsync(id, dto); return NoContent(); }
+        [Authorize(Policy = Policies.Staff)]
+        [HttpGet("{id}/movimientos-stock")]
+        public async Task<IActionResult> HistorialStock(int id, int pagina = 1, int tamanioPagina = 10) => Ok(await _stockService.ObtenerMovimientosAsync(id, null, null, null, pagina, tamanioPagina));
         [HttpGet("{id}")]
         public async Task<ActionResult<Producto>> GetProducto(int id)
         {

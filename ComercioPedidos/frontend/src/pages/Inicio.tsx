@@ -6,7 +6,10 @@ import type { Pedido } from "../models/Pedido";
 import type { Producto } from "../models/Producto";
 
 import { obtenerClientes } from "../services/clienteService";
-import { obtenerProductos } from "../services/productoService";
+import {
+  obtenerStockBajo,
+  obtenerProductos,
+} from "../services/productoService";
 import { obtenerPedidos } from "../services/pedidoService";
 
 function Inicio() {
@@ -39,6 +42,7 @@ function Inicio() {
           productos,
           pedidosPendientesResultado,
           pedidosRecientesResultado,
+          alertas,
         ] = await Promise.all([
           obtenerClientes(),
 
@@ -54,6 +58,7 @@ function Inicio() {
             pagina: 1,
             tamanioPagina: 5,
           }),
+          obtenerStockBajo(),
         ]);
 
         /* CLIENTES ACTIVOS */
@@ -70,16 +75,8 @@ function Inicio() {
 
         /* STOCK BAJO */
 
-        const cantidadStockBajo = productos.filter(
-          (producto) =>
-            producto.activo && producto.stock > 0 && producto.stock <= 5,
-        ).length;
-
-        /* ALERTAS DE STOCK */
-
-        const productosConStockCritico = productos
-          .filter((producto) => producto.activo && producto.stock <= 5)
-          .sort((a, b) => a.stock - b.stock);
+        const cantidadStockBajo = alertas.length;
+        const productosConStockCritico = alertas;
 
         /* ACTUALIZAR ESTADOS */
 
@@ -174,7 +171,7 @@ function Inicio() {
             {cargando ? "—" : stockBajo}
           </strong>
 
-          <p>Productos entre 1 y 5 unidades</p>
+          <p>Productos en o debajo de su mínimo configurado</p>
 
           <span className="dashboard-card-action">Revisar stock →</span>
         </button>

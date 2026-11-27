@@ -86,6 +86,10 @@ export default function MovimientoStockModal({
       return;
     }
 
+    if (motivo.trim().length < 3) {
+      setError("Ingresá el motivo del movimiento (al menos 3 caracteres).");
+      return;
+    }
     enviando.current = true;
     setGuardando(true);
 
@@ -93,9 +97,8 @@ export default function MovimientoStockModal({
       await registrarMovimientoStock(tipo, {
         productoId,
         cantidad: cantidadNumerica,
-        motivo:
-          motivo.trim() ||
-          (tipo === "Entrada" ? "Reposición manual" : "Salida manual"),
+        motivo: motivo.trim(),
+        version: productos.find((p) => p.id === productoId)?.version,
       });
     } catch (error: unknown) {
       setError(errorMessage(error, "No se pudo registrar el movimiento."));

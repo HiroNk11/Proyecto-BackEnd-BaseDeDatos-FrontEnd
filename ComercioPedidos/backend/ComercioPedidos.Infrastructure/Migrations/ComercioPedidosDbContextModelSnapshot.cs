@@ -17,7 +17,7 @@ namespace ComercioPedidos.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.13")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -85,6 +85,41 @@ namespace ComercioPedidos.Infrastructure.Migrations
                     b.ToTable("DetallesPedidos");
                 });
 
+            modelBuilder.Entity("ComercioPedidos.Application.Entitites.HistorialEstadoPedido", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("EstadoAnterior")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("EstadoNuevo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("FechaUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PedidoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UsuarioId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PedidoId", "FechaUtc", "Id");
+
+                    b.ToTable("HistorialEstadosPedidos");
+                });
+
             modelBuilder.Entity("ComercioPedidos.Application.Entitites.MovimientoStock", b =>
                 {
                     b.Property<int>("Id")
@@ -119,9 +154,19 @@ namespace ComercioPedidos.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("TipoMovimiento")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("UsuarioId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductoId");
+                    b.HasIndex("ProductoId", "Fecha", "Id");
 
                     b.ToTable("MovimientosStock", (string)null);
                 });
@@ -138,6 +183,7 @@ namespace ComercioPedidos.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Estado")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -146,6 +192,10 @@ namespace ComercioPedidos.Infrastructure.Migrations
 
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -176,7 +226,15 @@ namespace ComercioPedidos.Infrastructure.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Stock")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
+
+                    b.Property<int>("StockMinimo")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -239,6 +297,17 @@ namespace ComercioPedidos.Infrastructure.Migrations
                     b.Navigation("Producto");
                 });
 
+            modelBuilder.Entity("ComercioPedidos.Application.Entitites.HistorialEstadoPedido", b =>
+                {
+                    b.HasOne("ComercioPedidos.Application.Entitites.Pedido", "Pedido")
+                        .WithMany("Historial")
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Pedido");
+                });
+
             modelBuilder.Entity("ComercioPedidos.Application.Entitites.MovimientoStock", b =>
                 {
                     b.HasOne("ComercioPedidos.Application.Entitites.Producto", "Producto")
@@ -264,6 +333,8 @@ namespace ComercioPedidos.Infrastructure.Migrations
             modelBuilder.Entity("ComercioPedidos.Application.Entitites.Pedido", b =>
                 {
                     b.Navigation("Detalles");
+
+                    b.Navigation("Historial");
                 });
 
             modelBuilder.Entity("ComercioPedidos.Application.Entitites.Producto", b =>

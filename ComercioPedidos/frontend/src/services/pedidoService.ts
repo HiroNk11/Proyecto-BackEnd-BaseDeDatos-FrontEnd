@@ -1,12 +1,7 @@
 import axios, { API_BASE_URL } from "./http"; //
-import type {
-  Pedido,
-  ResultadoPaginado,
-  CrearPedido
-} from "../models/Pedido";
+import type { Pedido, ResultadoPaginado, CrearPedido } from "../models/Pedido";
 
-
-const API_URL = API_BASE_URL + '/Pedidos';
+const API_URL = API_BASE_URL + "/Pedidos";
 
 export interface FiltrosPedidos {
   pagina?: number;
@@ -17,24 +12,19 @@ export interface FiltrosPedidos {
   fechaHasta?: string;
 }
 
-
 export const obtenerPedidos = async (
-  filtros: FiltrosPedidos = {}
+  filtros: FiltrosPedidos = {},
 ): Promise<ResultadoPaginado<Pedido>> => {
-
-  const respuesta = await axios.get<ResultadoPaginado<Pedido>>(
-    API_URL,
-    {
-      params: {
-        pagina: filtros.pagina ?? 1,
-        tamanioPagina: filtros.tamanioPagina ?? 10,
-        estado: filtros.estado,
-        clienteId: filtros.clienteId,
-        fechaDesde: filtros.fechaDesde,
-        fechaHasta: filtros.fechaHasta
-      }
-    }
-  );
+  const respuesta = await axios.get<ResultadoPaginado<Pedido>>(API_URL, {
+    params: {
+      pagina: filtros.pagina ?? 1,
+      tamanioPagina: filtros.tamanioPagina ?? 10,
+      estado: filtros.estado,
+      clienteId: filtros.clienteId,
+      fechaDesde: filtros.fechaDesde,
+      fechaHasta: filtros.fechaHasta,
+    },
+  });
 
   return respuesta.data;
 };
@@ -51,8 +41,15 @@ export const cancelarPedido = async (id: number): Promise<void> => {
   await axios.put(`${API_URL}/${id}/cancelar`);
 };
 
-export const crearPedido = async (
-  pedido: CrearPedido
-): Promise<void> => {
+export const crearPedido = async (pedido: CrearPedido): Promise<void> => {
   await axios.post(API_URL, pedido);
 };
+
+export const prepararPedido = async (id: number): Promise<void> => {
+  await axios.put(`${API_URL}/${id}/preparar`);
+};
+export const enviarPedido = async (id: number): Promise<void> => {
+  await axios.put(`${API_URL}/${id}/enviar`);
+};
+export const obtenerPedido = async (id: number): Promise<Pedido> =>
+  (await axios.get<Pedido>(`${API_URL}/${id}`)).data;

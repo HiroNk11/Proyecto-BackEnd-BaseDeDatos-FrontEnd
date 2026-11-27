@@ -17,6 +17,7 @@ import type { Producto } from "../models/Producto";
 import { obtenerClientes } from "../services/clienteService";
 import { obtenerProductos } from "../services/productoService";
 import { crearPedido } from "../services/pedidoService";
+import { availability } from "../lib/lifecycle";
 import { errorMessage } from "../lib/problem";
 import ResourceState from "./ResourceState";
 interface Props {
@@ -65,7 +66,12 @@ export default function NuevoPedidoModal({ onCerrar, onCreado }: Props) {
   );
   const units = selected.reduce((sum, p) => sum + quantities[p.id], 0);
   function quantity(product: Producto, value: number) {
-    if (!busy && Number.isSafeInteger(value) && value >= 0)
+    if (
+      !busy &&
+      Number.isSafeInteger(value) &&
+      value >= 0 &&
+      value <= product.stock
+    )
       setQuantities((previous) => ({ ...previous, [product.id]: value }));
   }
   async function save() {
@@ -182,7 +188,10 @@ export default function NuevoPedidoModal({ onCerrar, onCreado }: Props) {
                     <Text style={s.name}>{p.nombre}</Text>
                     <Text style={s.price}>{money(p.precio)}</Text>
                     <View style={s.row}>
-                      <Text style={s.hint}>Stock: {p.stock}</Text>
+                      <Text style={s.hint}>
+                        Stock: {p.stock} ·{" "}
+                        {availability(p.stock, p.stockMinimo ?? 0)}
+                      </Text>
                       <View style={s.quantity}>
                         <Pressable
                           accessibilityRole="button"
@@ -202,7 +211,7 @@ export default function NuevoPedidoModal({ onCerrar, onCreado }: Props) {
                           accessibilityLabel={`Cantidad de ${p.nombre}`}
                           keyboardType="number-pad"
                           value={String(quantities[p.id] || 0)}
-                          editable={!busy}
+                          editable={!busy && p.stock > 0}
                           selectTextOnFocus
                           onChangeText={(value) => {
                             if (/^\d*$/.test(value)) quantity(p, Number(value));

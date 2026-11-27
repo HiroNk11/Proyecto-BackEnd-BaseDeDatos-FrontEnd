@@ -3,6 +3,7 @@ const styles: Record<string, string> = {
   Confirmado: "confirmed",
   "En preparación": "preparing",
   EnPreparacion: "preparing",
+  Enviado: "shipped",
   Entregado: "delivered",
   Cancelado: "cancelled",
 };

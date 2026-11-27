@@ -21,6 +21,10 @@ namespace ComercioPedidos.Application.DTO
                 = string.Empty;
 
             public int Cantidad { get; set; }
+            public string TipoMovimiento { get; set; } = string.Empty;
+            public string UsuarioId { get; set; } = string.Empty;
+            public DateTime FechaUtc { get; set; }
+            public int StockNuevo { get; set; }
 
             public int StockAnterior { get; set; }
 

@@ -29,6 +29,11 @@ public sealed class PedidoRulesTests
     [InlineData(EstadoPedido.Pendiente, EstadoPedido.Cancelado)]
     [InlineData(EstadoPedido.Confirmado, EstadoPedido.Cancelado)]
     [InlineData(EstadoPedido.Confirmado, EstadoPedido.Entregado)]
+    [InlineData(EstadoPedido.Confirmado, EstadoPedido.EnPreparacion)]
+    [InlineData(EstadoPedido.EnPreparacion, EstadoPedido.Enviado)]
+    [InlineData(EstadoPedido.Enviado, EstadoPedido.Entregado)]
+    [InlineData(EstadoPedido.EnPreparacion, EstadoPedido.Cancelado)]
+    [InlineData(EstadoPedido.Enviado, EstadoPedido.Cancelado)]
     public void TransicionesPermitidas(EstadoPedido actual, EstadoPedido siguiente) => PedidoRules.ValidarTransicion(actual, siguiente);
 
     [Theory]
@@ -37,7 +42,11 @@ public sealed class PedidoRulesTests
     [InlineData(EstadoPedido.Cancelado, EstadoPedido.Cancelado)]
     [InlineData(EstadoPedido.Entregado, EstadoPedido.Cancelado)]
     [InlineData(EstadoPedido.Confirmado, EstadoPedido.Confirmado)]
-    public void TransicionesInvalidasSonConflictos(EstadoPedido actual, EstadoPedido siguiente) => Assert.Throws<ConflictoException>(() => PedidoRules.ValidarTransicion(actual, siguiente));
+    [InlineData(EstadoPedido.Pendiente, EstadoPedido.EnPreparacion)]
+    [InlineData(EstadoPedido.EnPreparacion, EstadoPedido.Confirmado)]
+    [InlineData(EstadoPedido.EnPreparacion, EstadoPedido.Entregado)]
+    [InlineData(EstadoPedido.Entregado, EstadoPedido.Enviado)]
+    public void TransicionesInvalidasSonReglasDeNegocio(EstadoPedido actual, EstadoPedido siguiente) => Assert.Throws<ReglaNegocioException>(() => PedidoRules.ValidarTransicion(actual, siguiente));
 
     [Fact]
     public void AgrupaProductosRepetidosSinPerderCantidades()

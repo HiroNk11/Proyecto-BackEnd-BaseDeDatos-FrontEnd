@@ -21,7 +21,11 @@ public static class PedidoRules
     }
     public static void ValidarTransicion(EstadoPedido actual, EstadoPedido destino)
     {
-        var permitida = (actual, destino) switch { (EstadoPedido.Pendiente, EstadoPedido.Confirmado) => true, (EstadoPedido.Confirmado, EstadoPedido.Entregado) => true, (EstadoPedido.Pendiente or EstadoPedido.Confirmado, EstadoPedido.Cancelado) => true, _ => false };
-        if (!permitida) throw new ConflictoException($"No se puede pasar de {actual} a {destino}.");
+        var permitida = (actual, destino) switch { (EstadoPedido.Pendiente, EstadoPedido.Confirmado) => true, (EstadoPedido.Confirmado, EstadoPedido.Entregado) => true, // Compatibilidad del endpoint anterior.
+            (EstadoPedido.Confirmado, EstadoPedido.EnPreparacion) => true,
+            (EstadoPedido.EnPreparacion, EstadoPedido.Enviado) => true,
+            (EstadoPedido.Enviado, EstadoPedido.Entregado) => true,
+            (EstadoPedido.Pendiente or EstadoPedido.Confirmado or EstadoPedido.EnPreparacion or EstadoPedido.Enviado, EstadoPedido.Cancelado) => true, _ => false };
+        if (!permitida) throw new ReglaNegocioException($"No se puede pasar de {actual} a {destino}.");
     }
 }

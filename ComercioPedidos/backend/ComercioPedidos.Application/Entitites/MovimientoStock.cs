@@ -16,6 +16,8 @@ namespace ComercioPedidos.Application.Entitites
         public TipoMovimientoStock Tipo { get; set; }
 
         public int Cantidad { get; set; }
+        public ClaseMovimientoStock TipoMovimiento { get; set; }
+        public string UsuarioId { get; set; } = "historico-desconocido";
 
         public int StockAnterior { get; set; }
 
@@ -25,6 +27,7 @@ namespace ComercioPedidos.Application.Entitites
 
         public int? PedidoId { get; set; }
 
+        [System.Text.Json.Serialization.JsonIgnore]
         public Producto? Producto { get; set; }
     }
 }

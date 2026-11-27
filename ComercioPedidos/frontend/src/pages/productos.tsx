@@ -1,3 +1,4 @@
+import ProductInventoryModal from "../components/ProductInventoryModal";
 import { useRef } from "react";
 import { errorMessage } from "../lib/problem";
 import { useEffect, useState, type FormEvent } from "react";
@@ -19,10 +20,12 @@ const productoInicial: CrearProducto = {
   descripcion: "",
   precio: 0,
   stock: 0,
+  stockMinimo: 0,
   activo: true,
 };
 
 function Productos() {
+  const [inventoryId, setInventoryId] = useState<number | null>(null);
   const [mensajeExito, setMensajeExito] = useState("");
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -115,6 +118,8 @@ function Productos() {
       descripcion: producto.descripcion ?? "",
       precio: producto.precio,
       stock: producto.stock,
+      stockMinimo: producto.stockMinimo ?? 0,
+      version: producto.version,
       activo: producto.activo,
     });
 
@@ -155,9 +160,15 @@ function Productos() {
       setError("");
 
       if (!esEdicion) {
-        await crearProducto(nuevoProducto);
+        await crearProducto({
+          ...nuevoProducto,
+          motivoStock: nuevoProducto.motivoStock?.trim() || undefined,
+        });
       } else {
-        await actualizarProducto(productoEditandoId, nuevoProducto);
+        await actualizarProducto(productoEditandoId, {
+          ...nuevoProducto,
+          motivoStock: nuevoProducto.motivoStock?.trim() || undefined,
+        });
       }
 
       await cargarProductos();
@@ -216,7 +227,7 @@ function Productos() {
      ESTADO DEL STOCK
   ========================= */
 
-  const obtenerEstadoStock = (stock: number) => {
+  const obtenerEstadoStock = (stock: number, minimum: number) => {
     if (stock === 0) {
       return {
         texto: "Sin stock",
@@ -224,7 +235,7 @@ function Productos() {
       };
     }
 
-    if (stock <= 5) {
+    if (stock <= minimum) {
       return {
         texto: "Stock bajo",
         clase: "stock-badge stock-low",
@@ -257,8 +268,7 @@ function Productos() {
       (filtroEstado === "inactivo" && !producto.activo) ||
       (filtroEstado === "stock-bajo" &&
         producto.activo &&
-        producto.stock > 0 &&
-        producto.stock <= 5) ||
+        producto.stock <= (producto.stockMinimo ?? 0)) ||
       (filtroEstado === "sin-stock" && producto.stock === 0);
 
     return coincideBusqueda && coincideEstado;
@@ -363,7 +373,10 @@ function Productos() {
               </tr>
             ) : (
               productosFiltrados.map((producto) => {
-                const estadoStock = obtenerEstadoStock(producto.stock);
+                const estadoStock = obtenerEstadoStock(
+                  producto.stock,
+                  producto.stockMinimo ?? 0,
+                );
 
                 return (
                   <tr key={producto.id}>
@@ -403,6 +416,12 @@ function Productos() {
                     <td>
                       <div className="table-actions">
                         <button
+                          className="btn btn-secondary"
+                          onClick={() => setInventoryId(producto.id)}
+                        >
+                          Inventario / historial
+                        </button>
+                        <button
                           className="btn btn-edit"
                           onClick={() => handleEditar(producto)}
                         >
@@ -425,6 +444,13 @@ function Productos() {
         </table>
       </div>
 
+      {inventoryId !== null && (
+        <ProductInventoryModal
+          id={inventoryId}
+          onClose={() => setInventoryId(null)}
+          onSaved={() => void cargarProductos()}
+        />
+      )}
       {/* MODAL */}
 
       {mostrarFormulario && (
@@ -528,6 +554,48 @@ function Productos() {
                 />
               </div>
 
+              <div className="form-group">
+                <label htmlFor="producto-minimo">
+                  Stock mínimo para reposición
+                </label>
+                <input
+                  id="producto-minimo"
+                  type="number"
+                  min="0"
+                  max="2147483647"
+                  step="1"
+                  value={nuevoProducto.stockMinimo ?? 0}
+                  onChange={(e) =>
+                    setNuevoProducto({
+                      ...nuevoProducto,
+                      stockMinimo: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="producto-motivo">
+                  Motivo del cambio de stock
+                </label>
+                <input
+                  id="producto-motivo"
+                  required={
+                    productoEditandoId !== null &&
+                    productos.find((p) => p.id === productoEditandoId)
+                      ?.stock !== nuevoProducto.stock
+                  }
+                  minLength={3}
+                  maxLength={250}
+                  value={nuevoProducto.motivoStock ?? ""}
+                  onChange={(e) =>
+                    setNuevoProducto({
+                      ...nuevoProducto,
+                      motivoStock: e.target.value,
+                    })
+                  }
+                  placeholder="Usá Inventario / historial para un ajuste detallado"
+                />
+              </div>
               {/* ESTADO */}
 
               <div className="form-group">

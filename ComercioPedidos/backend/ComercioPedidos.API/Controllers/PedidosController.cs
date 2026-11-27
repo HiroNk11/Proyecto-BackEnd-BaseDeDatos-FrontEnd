@@ -98,6 +98,12 @@ namespace ComercioPedidos.API.Controllers
         }
 
         [Authorize(Policy = Policies.Staff)]
+        [HttpPut("{id}/preparar")]
+        public async Task<IActionResult> Preparar(int id) { await _pedidoService.PrepararPedidoAsync(id); return NoContent(); }
+        [Authorize(Policy = Policies.Staff)]
+        [HttpPut("{id}/enviar")]
+        public async Task<IActionResult> Enviar(int id) { await _pedidoService.EnviarPedidoAsync(id); return NoContent(); }
+        [Authorize(Policy = Policies.Staff)]
         [HttpPut("{id}/entregar")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

@@ -6,6 +6,27 @@ on:
 permissions:
   contents: read
 jobs:
+  sql-server:
+    runs-on: windows-2025
+    env:
+      COMERCIO_TEST_SQL_SERVER: '(localdb)\ComercioCI'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Start isolated SQL Server LocalDB instance
+        shell: pwsh
+        run: |
+          $localDbExe = (Get-Command SqlLocalDB.exe -ErrorAction SilentlyContinue).Source
+          if (-not $localDbExe) {
+            $localDbExe = Get-ChildItem -Path "$env:ProgramFiles\Microsoft SQL Server\*\Tools\Binn\SqlLocalDB.exe" | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $localDbExe) { throw 'SQL Server LocalDB runtime is required.' }
+          & $localDbExe create ComercioCI -s
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create the CI LocalDB instance.' }
+      - run: dotnet build ComercioPedidos/backend/ComercioPedidos.slnx --no-incremental -warnaserror
+      - run: dotnet test ComercioPedidos/backend/ComercioPedidos.slnx --no-build
   backend:
     runs-on: ubuntu-latest
     steps:

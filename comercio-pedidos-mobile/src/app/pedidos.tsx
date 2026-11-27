@@ -22,6 +22,8 @@ const filters = [
   { label: "Todos", value: "" },
   { label: "Pendientes", value: "Pendiente" },
   { label: "Confirmados", value: "Confirmado" },
+  { label: "En preparación", value: "EnPreparacion" },
+  { label: "Enviados", value: "Enviado" },
   { label: "Entregados", value: "Entregado" },
   { label: "Cancelados", value: "Cancelado" },
 ];
@@ -73,6 +75,18 @@ export default function PedidosScreen() {
     setError("");
     setLoading(true);
     setRevision((v) => v + 1);
+  }
+  async function openDetail(order: Pedido) {
+    setSelected(order);
+    setDetailError("");
+    setDetailRefreshing(true);
+    try {
+      setSelected(await obtenerPedido(order.id));
+    } catch (failure) {
+      setDetailError(errorMessage(failure));
+    } finally {
+      setDetailRefreshing(false);
+    }
   }
   async function refreshDetail() {
     if (!selected || detailBusy || detailRefreshing) return;
@@ -165,10 +179,7 @@ export default function PedidosScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Ver pedido ${item.id}`}
-            onPress={() => {
-              setDetailError("");
-              setSelected(item);
-            }}
+            onPress={() => void openDetail(item)}
             style={s.card}
           >
             <View style={s.row}>
@@ -280,6 +291,21 @@ export default function PedidosScreen() {
                 </View>
               ))}
               <Text style={s.total}>Total {money(selected.total)}</Text>
+              <Text style={s.customer}>Historial de estados</Text>
+              {(selected.historial || []).map((entry) => (
+                <View key={entry.id} style={s.card}>
+                  <StatusBadge estado={entry.estadoNuevo} />
+                  <Text style={s.text}>
+                    {new Date(entry.fechaUtc).toLocaleString("es-AR")} ·{" "}
+                    {entry.usuarioId}
+                  </Text>
+                </View>
+              ))}
+              {!selected.historial?.length && (
+                <Text style={s.text}>
+                  Actualizá el seguimiento para consultar el historial.
+                </Text>
+              )}
               <AccionesPedido
                 key={`${selected.id}-${selected.estado}`}
                 onBusyChange={setDetailBusy}

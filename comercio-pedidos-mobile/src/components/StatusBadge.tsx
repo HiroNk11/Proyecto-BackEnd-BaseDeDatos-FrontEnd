@@ -4,6 +4,7 @@ const colors: Record<string, { backgroundColor: string; color: string }> = {
   Confirmado: { backgroundColor: "#e3efff", color: "#265a94" },
   "En preparación": { backgroundColor: "#eee5fa", color: "#7143a1" },
   EnPreparacion: { backgroundColor: "#eee5fa", color: "#7143a1" },
+  Enviado: { backgroundColor: "#dff2f4", color: "#236773" },
   Entregado: { backgroundColor: "#e1f3e8", color: "#226445" },
   Cancelado: { backgroundColor: "#fde7e5", color: "#a13d35" },
 };
